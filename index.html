@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>玄玑 · 中华文化历 —— 节气 · 阴阳历 · 节日 · 八卦 · 三维罗盘</title>
+<meta name="description" content="玄幻风格的中华文化日历:二十四节气、农历公历互转、公共/传统/道教/佛教/民族/伊斯兰节日、乾坤八卦与可拖拽三维罗盘">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="sky"></canvas>
+<div class="nebula n1"></div>
+<div class="nebula n2"></div>
+<div class="nebula n3"></div>
+<div class="vignette"></div>
+
+<header class="top">
+  <div class="logo">
+    <div class="taiji-mini"></div>
+    <div class="logo-text">
+      <h1>玄玑<span class="dot">·</span>中华文化历</h1>
+      <p class="slogan">观阴阳之变 · 探乾坤之机</p>
+    </div>
+  </div>
+  <div class="top-right">
+    <span id="todayBrief" class="today-brief"></span>
+    <button id="btnToday" class="btn ghost">回到今天</button>
+  </div>
+</header>
+
+<main>
+  <!-- ═══════════ 首屏:当日命盘 + 三维罗盘 ═══════════ -->
+  <section class="hero">
+    <div class="panel day-panel rise">
+      <div id="termBanner" class="term-banner hidden"></div>
+      <div class="date-hero">
+        <div class="greg">
+          <div id="gregDay" class="greg-day">--</div>
+          <div class="greg-side">
+            <div id="gregYear" class="greg-year">----</div>
+            <div id="gregDate" class="greg-date">--月--日</div>
+            <div id="weekDay" class="week-day">星期-</div>
+          </div>
+        </div>
+        <div id="lunarLine" class="lunar-line"></div>
+        <div id="zodiacLine" class="zodiac-line"></div>
+      </div>
+
+      <div class="pillars" id="pillars"></div>
+      <div class="meta-chips" id="metaChips"></div>
+      <div class="yiji" id="yiji"></div>
+
+      <div class="fest-block">
+        <h3><i class="ico">❈</i>当日节历</h3>
+        <ul id="festList"></ul>
+      </div>
+      <div class="next-term" id="nextTerm"></div>
+    </div>
+
+    <div class="panel compass-panel rise">
+      <canvas id="luopan"></canvas>
+      <div class="compass-hint">☯ 拖动旋转 · 滚轮缩放 · 浑天自转</div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 历法月历 ═══════════ -->
+  <section class="panel cal-panel rise">
+    <div class="cal-head">
+      <div class="cal-nav">
+        <button id="prevYear" class="btn ghost" title="上一年">«</button>
+        <button id="prevMonth" class="btn ghost" title="上一月">‹</button>
+        <h2 id="calTitle">----年--月</h2>
+        <button id="nextMonth" class="btn ghost" title="下一月">›</button>
+        <button id="nextYear" class="btn ghost" title="下一年">»</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="cal-week">
+      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="end">六</span><span class="end">日</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </section>
+
+  <!-- ═══════════ 知识三卷 ═══════════ -->
+  <section class="know">
+    <div class="panel bagua-panel rise">
+      <h2>乾坤八卦</h2>
+      <div class="bagua-wheel" id="baguaWheel">
+        <div class="bagua-ring"></div>
+        <div class="taiji-center" title="太极生两仪"></div>
+      </div>
+      <div class="bagua-detail" id="baguaDetail"></div>
+    </div>
+
+    <div class="panel term-panel rise">
+      <h2>廿四节气</h2>
+      <div class="cur-term" id="curTerm"></div>
+      <ol class="term-list" id="termList"></ol>
+    </div>
+
+    <div class="panel divin-panel rise">
+      <h2>玄机一占</h2>
+      <p class="divin-tip">静心凝神 · 以三枚铜钱起卦 · 问当下之事</p>
+      <div class="hex-show" id="hexShow">
+        <div class="hex-empty">卦象虚位以待</div>
+      </div>
+      <button id="btnCast" class="btn gold">起卦问玄机</button>
+      <p class="divin-note">铜钱起卦 · 老变少不变 · 卦语为文化演绎,聊博一哂</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="seal">玄玑</div>
+  <p>农历·节气采用 1900—3000 年标准历表推算(北京时间东八区)· 伊斯兰节日按历表推算,实际日期以新月观测为准,或有 ±1 日之差</p>
+  <p>民族节日各地时序或有差异,以当地为准 · 干支以立春分界 · 宜忌占卦源于民俗文化,仅供品读娱乐</p>
+</footer>
+
+<script src="js/table.js"></script>
+<script src="js/lunar.js"></script>
+<script src="js/data.js"></script>
+<script src="js/sky.js"></script>
+<script src="js/luopan.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
