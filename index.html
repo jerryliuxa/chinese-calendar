@@ -13,9 +13,7 @@
 <body>
 
 <canvas id="sky"></canvas>
-<div class="nebula n1"></div>
-<div class="nebula n2"></div>
-<div class="nebula n3"></div>
+<canvas id="skyfx"></canvas>
 <div class="vignette"></div>
 
 <header class="top">
@@ -63,7 +61,12 @@
 
     <div class="panel compass-panel rise">
       <canvas id="luopan"></canvas>
-      <div class="compass-hint">☯ 拖动旋转 · 滚轮缩放 · 浑天自转</div>
+      <div class="compass-ctrl">
+        <button id="btnCollapse" class="btn mini" title="正对俯视,合拢成完整罗盘">合拢</button>
+        <label class="gap-slider"><span>层距</span><input id="gapRange" type="range" min="40" max="170" value="100"></label>
+        <button id="btnExpand" class="btn mini" title="展开分层,纵览各盘圈层">展开</button>
+      </div>
+      <div class="compass-hint">☯ 拖动旋转 · 上拖合拢 · 下拖展开 · 滚轮缩放</div>
     </div>
   </section>
 
@@ -120,6 +123,7 @@
   <p>民族节日各地时序或有差异,以当地为准 · 干支以立春分界 · 宜忌占卦源于民俗文化,仅供品读娱乐</p>
 </footer>
 
+<script>window.addEventListener('error', function (e) { (window.__errs = window.__errs || []).push(e.message + ' @ ' + (e.filename || '').split('/').pop() + ':' + e.lineno); });</script>
 <script src="js/table.js"></script>
 <script src="js/lunar.js"></script>
 <script src="js/data.js"></script>

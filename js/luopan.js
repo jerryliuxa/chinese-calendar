@@ -1,8 +1,10 @@
 /* ═══════════════════════════════════════════════
- * 三维浑天罗盘 luopan.js
- * Canvas 手写 3D 投影:五重环轨 · 太极天心
- * 二十八宿 / 廿四节气 / 十二地支 / 十天干 / 八卦
- * 拖动旋转 · 滚轮缩放 · 闲时自转
+ * 三维分层罗盘 luopan.js  v2 · 真实罗盘制式
+ * 外盘方座 + 七层盘面悬浮展开(爆炸图式)
+ *   底座 → 二十八宿 → 廿四节气 → 二十四山
+ *        → 洛书九星 → 先天八卦 → 天池磁针
+ * 性能:全部盘面预烘离屏精灵,每帧仅仿射贴图
+ * 交互:拖动旋转视角(上拖合拢/下拖展开)· 滚轮缩放 · 层距调节
  * ═══════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -11,273 +13,358 @@
   if (!cv) return;
   const ctx = cv.getContext('2d');
 
-  const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-  const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-  const BAGUA_ROWS = { '乾': [1,1,1], '兑': [0,1,1], '离': [1,0,1], '震': [0,0,1], '巽': [1,1,0], '坎': [0,1,0], '艮': [1,0,0], '坤': [0,0,0] };
-  const GUAS = ['乾', '兑', '离', '震', '巽', '坎', '艮', '坤'];
+  /* ─────────── 盘面数据 ─────────── */
+  const XIU = ['角','亢','氐','房','心','尾','箕','斗','牛','女','虚','危','室','壁','奎','娄','胃','昴','毕','觜','参','井','鬼','柳','星','张','翼','轸'];
+  const SHAN = ['壬','子','癸','丑','艮','寅','甲','卯','乙','辰','巽','巳','丙','午','丁','未','坤','申','庚','酉','辛','戌','乾','亥']; // 子正北(下)
+  const JIE = LUNAR_TABLE.solarTerm; // 小寒..冬至
+  const LUOSHU = ['九紫','二黑','七赤','六白','一白','八白','三碧','四绿']; // 自上(离南)顺时针,五黄居中
+  const BAGUA = ['乾','巽','坎','艮','坤','震','离','兑']; // 先天方位:乾南(上)顺时针
+  const BAGUA_ROWS = { '乾':[1,1,1], '兑':[0,1,1], '离':[1,0,1], '震':[0,0,1], '巽':[1,1,0], '坎':[0,1,0], '艮':[1,0,0], '坤':[0,0,0] };
 
-  /* 环轨配置:R 半径(外环=1) tilt 基础倾角 speed 环面旋进 selfSpin 环上字转 */
-  const RINGS = [
-    { R: 1.00, kind: 'xiu',  size: 0.075, color: '#9fc6ff', tilt: 1.16, speed: 0.050,  spin: 0.20,  dir: 1 },
-    { R: 0.845, kind: 'jie', size: 0.062, color: '#7de8a8', tilt: 0.72, speed: -0.042, spin: -0.15, dir: -1 },
-    { R: 0.67, kind: 'zhi',  size: 0.105, color: '#6fd3ff', tilt: 1.00, speed: 0.060,  spin: -0.24, dir: -1 },
-    { R: 0.52, kind: 'gan',  size: 0.105, color: '#f0c674', tilt: 0.50, speed: -0.070, spin: 0.30,  dir: 1 },
-    { R: 0.37, kind: 'gua',  size: 0.150, color: '#f0a56a', tilt: 0.88, speed: 0.085,  spin: -0.36, dir: -1 }
+  const GOLD = '#e8c37a', GOLD_HI = '#f7e3b1', RED = 'rgba(186,62,58,';
+  const FONT = "'Noto Serif SC','KaiTi','STKaiti',serif";
+
+  /* 层定义:自下而上。rIn/rOut 为圈层带半径,unit 为盘单位半径 */
+  const LAYERS = [
+    { id: 'base',    kind: 'base', R: 1.36, rot: 0 },
+    { id: 'xiu',     kind: 'ring', R: 1.20, rIn: 0.985, rOut: 1.165, n: 28, text: XIU,  color: '#9fc6ff', fs: 0.062, rot: 0.028,  start: 90 },
+    { id: 'jie',     kind: 'ring', R: 0.99, rIn: 0.805, rOut: 0.975, n: 24, text: JIE,  color: '#7de8a8', fs: 0.055, rot: -0.022, start: 195, two: true },
+    { id: 'shan',    kind: 'ring', R: 0.80, rIn: 0.605, rOut: 0.795, n: 24, text: SHAN, color: GOLD_HI,   fs: 0.100, rot: 0.016,  start: 165 },
+    { id: 'luoshu',  kind: 'ring', R: 0.60, rIn: 0.435, rOut: 0.595, n: 8,  text: LUOSHU, color: '#6fd3ff', fs: 0.070, rot: -0.026, start: 0, two: true },
+    { id: 'bagua',   kind: 'bagua', R: 0.44, rIn: 0.175, rOut: 0.435, n: 8, text: BAGUA, color: '#f0a56a', rot: 0.034, start: 0 },
+    { id: 'tianchi', kind: 'tianchi', R: 0.30, rot: -0.02 }
   ];
+  const MID = (LAYERS.length - 1) / 2;
 
-  /* 视角状态 */
-  let W = 0, H = 0, CX = 0, CY = 0, U = 0, dpr = 1;
-  let yaw = -0.6, pitch = 1.02, zoom = 1, targetZoom = 1;
+  /* ─────────── 离屏精灵烘焙 ─────────── */
+  const BAKE = 1120;                 // 最大精灵边长(px)
+  const K = BAKE / 2 / 1.37;         // 烘焙比例尺 px/unit(按最大盘定)
+  const rr = (r) => r * K;           // 单位半径 → 烘焙像素
+  const sprites = {};
+  let haloSprite = null;
+
+  function mkCanvas(w, h) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    return c;
+  }
+  function bakeDisc(layer) {
+    const size = Math.ceil(layer.R * 2 * K) + 8;
+    const c = mkCanvas(size, size);
+    const g = c.getContext('2d');
+    const cx = size / 2, cy = size / 2, k = K;
+    g.translate(cx, cy);
+
+    if (layer.kind === 'base') return bakeBase(c, g, k);
+    if (layer.kind === 'tianchi') return bakeTianchi(c, g, k);
+
+    /* 盘面:半透明琉璃圈带 */
+    g.beginPath();
+    g.arc(0, 0, rr(layer.R - 0.012), 0, 6.2832);
+    g.arc(0, 0, rr(layer.rIn + 0.008), 0, 6.2832, true);
+    g.fillStyle = 'rgba(9, 12, 28, 0.80)';
+    g.fill();
+    /* 内孔微光 */
+    g.beginPath(); g.arc(0, 0, rr(layer.rIn + 0.008), 0, 6.2832);
+    g.strokeStyle = 'rgba(232,195,122,0.14)'; g.lineWidth = 1.5; g.stroke();
+
+    /* 外缘金环(烘焙光晕) */
+    g.beginPath(); g.arc(0, 0, rr(layer.R - 0.012), 0, 6.2832);
+    g.strokeStyle = 'rgba(232,195,122,0.85)'; g.lineWidth = 2.6;
+    g.shadowColor = 'rgba(232,195,122,0.8)'; g.shadowBlur = 12; g.stroke();
+    g.shadowBlur = 0;
+    g.beginPath(); g.arc(0, 0, rr(layer.R - 0.012) - 4, 0, 6.2832);
+    g.strokeStyle = 'rgba(232,195,122,0.22)'; g.lineWidth = 1; g.stroke();
+
+    /* 辐条分区线(与文字起始角对齐,字符位于扇区中央) */
+    const n = layer.n, step = Math.PI * 2 / n;
+    const a0 = layer.start * Math.PI / 180 - Math.PI / 2;
+    for (let i = 0; i < n; i++) {
+      const a = a0 + i * step;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * rr(layer.rIn + 0.01), Math.sin(a) * rr(layer.rIn + 0.01));
+      g.lineTo(Math.cos(a) * rr(layer.rOut - 0.01), Math.sin(a) * rr(layer.rOut - 0.01));
+      g.strokeStyle = 'rgba(232,195,122,0.20)';
+      g.lineWidth = layer.id === 'shan' ? 1.6 : 1;
+      g.stroke();
+    }
+
+    if (layer.kind === 'bagua') { bakeBagua(g, layer, k); return c; }
+
+    /* 环上文字:字头朝外 */
+    const rMid = (layer.rIn + layer.rOut) / 2;
+    g.fillStyle = layer.color;
+    g.shadowColor = layer.color; g.shadowBlur = 7;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `600 ${Math.round(rr(layer.fs))}px ${FONT}`;
+    for (let i = 0; i < n; i++) {
+      const a = (layer.start * Math.PI / 180) + (i + 0.5) * step;
+      g.save();
+      g.rotate(a);
+      g.translate(0, -rr(rMid));   // 该处字头朝外(上方)
+      const txt = layer.text[i];
+      if (layer.two) {
+        const half = rr(layer.fs) * 0.62;
+        g.fillText(txt[0], 0, -half);
+        g.fillText(txt[1], 0, half);
+      } else {
+        g.fillText(txt, 0, 0);
+      }
+      g.restore();
+    }
+    g.shadowBlur = 0;
+
+    /* 二十八宿盘:外缘细分刻度环 */
+    if (layer.id === 'xiu') {
+      for (let i = 0; i < 72; i++) {
+        const a = i / 72 * Math.PI * 2;
+        const r0 = rr(layer.R - 0.052), r1 = rr(layer.R - 0.028);
+        g.beginPath();
+        g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+        g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+        g.strokeStyle = i % 9 === 0 ? 'rgba(159,198,255,0.6)' : 'rgba(159,198,255,0.22)';
+        g.lineWidth = i % 9 === 0 ? 2 : 1;
+        g.stroke();
+      }
+    }
+    return c;
+  }
+
+  /* 先天八卦:三爻横条(垂直于半径)+ 卦名 */
+  function bakeBagua(g, layer, k) {
+    const n = 8, step = Math.PI * 2 / n;
+    for (let i = 0; i < n; i++) {
+      const a = (layer.start * Math.PI / 180) + (i + 0.5) * step;
+      g.save();
+      g.rotate(a);
+      g.translate(0, -rr((layer.rIn + layer.rOut) / 2));
+      const name = layer.text[i];
+      const rows = BAGUA_ROWS[name];
+      const w = rr(0.135), lw = rr(0.02), gap = rr(0.045);
+      g.strokeStyle = layer.color;
+      g.shadowColor = layer.color; g.shadowBlur = 6;
+      g.lineCap = 'round';
+      g.lineWidth = lw;
+      for (let r = 0; r < 3; r++) {   // 自外向内为上爻→下爻
+        const yy = -rr(0.022) + (r - 1) * gap;
+        if (rows[r] === 1) {
+          g.beginPath(); g.moveTo(-w / 2, yy); g.lineTo(w / 2, yy); g.stroke();
+        } else {
+          g.beginPath(); g.moveTo(-w / 2, yy); g.lineTo(-w / 8, yy); g.stroke();
+          g.beginPath(); g.moveTo(w / 8, yy); g.lineTo(w / 2, yy); g.stroke();
+        }
+      }
+      /* 卦名 */
+      g.shadowBlur = 5;
+      g.fillStyle = layer.color;
+      g.font = `600 ${Math.round(rr(0.062))}px ${FONT}`;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(name, 0, rr(0.135));
+      g.restore();
+    }
+    g.shadowBlur = 0;
+  }
+
+  /* 外盘方座:天圆地方 · 红十字定向线 · 四角添盘 */
+  function bakeBase(c, g, k) {
+    const half = rr(1.34);
+    g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = 26;
+    g.fillStyle = 'rgba(15, 11, 22, 0.88)';
+    g.beginPath();
+    if (g.roundRect) g.roundRect(-half, -half, half * 2, half * 2, 14);
+    else g.rect(-half, -half, half * 2, half * 2);
+    g.fill();
+    g.shadowBlur = 0;
+    /* 双层金边 */
+    g.strokeStyle = 'rgba(232,195,122,0.8)'; g.lineWidth = 3;
+    g.beginPath();
+    if (g.roundRect) g.roundRect(-half + 3, -half + 3, half * 2 - 6, half * 2 - 6, 12);
+    else g.rect(-half + 3, -half + 3, half * 2 - 6, half * 2 - 6);
+    g.stroke();
+    g.strokeStyle = 'rgba(232,195,122,0.25)'; g.lineWidth = 1;
+    g.beginPath();
+    if (g.roundRect) g.roundRect(-half + 12, -half + 12, half * 2 - 24, half * 2 - 24, 9);
+    else g.rect(-half + 12, -half + 12, half * 2 - 24, half * 2 - 24);
+    g.stroke();
+    /* 红十字定向线 */
+    g.strokeStyle = RED + '0.85)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(-half + 14, 0); g.lineTo(half - 14, 0); g.stroke();
+    g.beginPath(); g.moveTo(0, -half + 14); g.lineTo(0, half - 14); g.stroke();
+    g.strokeStyle = RED + '0.35)'; g.lineWidth = 1;
+    for (const d of [-0.62, 0.62]) {
+      g.beginPath(); g.moveTo(-half + 14, d * k); g.lineTo(half - 14, d * k); g.stroke();
+      g.beginPath(); g.moveTo(d * k, -half + 14); g.lineTo(d * k, half - 14); g.stroke();
+    }
+    /* 四角添盘(装饰圆) */
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const x = sx * half * 0.66, y = sy * half * 0.66;
+      g.beginPath(); g.arc(x, y, rr(0.085), 0, 6.2832);
+      g.fillStyle = 'rgba(26, 19, 34, 0.9)'; g.fill();
+      g.strokeStyle = 'rgba(232,195,122,0.55)'; g.lineWidth = 1.6; g.stroke();
+      g.beginPath(); g.arc(x, y, rr(0.045), 0, 6.2832);
+      g.strokeStyle = RED + '0.7)'; g.lineWidth = 1.2; g.stroke();
+    }
+    return c;
+  }
+
+  /* 天池:太极伏针 */
+  function bakeTianchi(c, g, k) {
+    const R = 0.30 * k;
+    /* 盘体 */
+    g.beginPath(); g.arc(0, 0, R, 0, 6.2832);
+    g.fillStyle = 'rgba(9, 12, 28, 0.92)'; g.fill();
+    g.strokeStyle = 'rgba(232,195,122,0.9)'; g.lineWidth = 2.8;
+    g.shadowColor = 'rgba(232,195,122,0.9)'; g.shadowBlur = 14; g.stroke();
+    g.shadowBlur = 0;
+    /* 天池内圈 + 卯酉十字红线 */
+    g.beginPath(); g.arc(0, 0, R * 0.66, 0, 6.2832);
+    g.fillStyle = 'rgba(16, 20, 44, 0.95)'; g.fill();
+    g.strokeStyle = RED + '0.75)'; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(-R * 0.66, 0); g.lineTo(R * 0.66, 0); g.stroke();
+    g.beginPath(); g.moveTo(0, -R * 0.66); g.lineTo(0, R * 0.66); g.stroke();
+    g.strokeStyle = 'rgba(232,195,122,0.5)'; g.lineWidth = 1.2;
+    g.beginPath(); g.arc(0, 0, R * 0.66, 0, 6.2832); g.stroke();
+    /* 太极 */
+    const r = R * 0.46;
+    g.beginPath(); g.arc(0, 0, r, 0, 6.2832); g.fillStyle = '#0d1130'; g.fill();
+    g.beginPath(); g.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false); g.closePath();
+    g.fillStyle = GOLD; g.shadowColor = 'rgba(232,195,122,0.85)'; g.shadowBlur = 12; g.fill();
+    g.beginPath(); g.arc(0, -r / 2, r / 2, 0, 6.2832); g.fill();
+    g.shadowBlur = 0;
+    g.beginPath(); g.arc(0, r / 2, r / 2, 0, 6.2832); g.fillStyle = '#0d1130'; g.fill();
+    g.beginPath(); g.arc(0, -r / 2, r / 6.5, 0, 6.2832); g.fillStyle = '#0d1130'; g.fill();
+    g.beginPath(); g.arc(0, r / 2, r / 6.5, 0, 6.2832); g.fillStyle = GOLD; g.fill();
+    return c;
+  }
+
+  function bakeShadows() {
+    /* 整体背景光晕精灵(单次贴图,替代逐层柔影) */
+    const s = 512;
+    haloSprite = mkCanvas(s, s);
+    const g = haloSprite.getContext('2d');
+    const grad = g.createRadialGradient(s / 2, s / 2, s * 0.08, s / 2, s / 2, s / 2);
+    grad.addColorStop(0, 'rgba(232,195,122,0.13)');
+    grad.addColorStop(0.45, 'rgba(120,90,180,0.08)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, 6.2832); g.fill();
+  }
+
+  function bakeAll() {
+    for (const layer of LAYERS) sprites[layer.id] = bakeDisc(layer);
+  }
+
+  /* ─────────── 视图状态 ─────────── */
+  let W = 0, H = 0, CX = 0, CY = 0, U = 0, dpr = 1, px = 1;
+  let yaw = -0.55, pitch = 0.95, pitchTarget = 0.95;
+  let zoom = 1, targetZoom = 1;
+  let gapFactor = 1.0;
   let vyaw = 0, dragging = false, lastX = 0, lastY = 0, lastInteract = -1e9;
   let visible = true;
 
-  /* 三维基:环面基矢量(绕 X 倾角 φ,再绕 Y 旋进 ψ) */
-  function ringBasis(phi, psi) {
-    const cp = Math.cos(phi), sp = Math.sin(phi);
-    const cy = Math.cos(psi), sy = Math.sin(psi);
+  /* 层世界高度(单位) */
+  const Y_STEP = 0.30;
+  function layerY(k, t) {
+    const bob = Math.sin(t * 0.0009 + k * 0.9) * 0.012;
+    return (k - MID) * Y_STEP * gapFactor + bob;
+  }
+  /* 仿射矩阵:盘面(unit) → 屏幕。返回 {a,b,c,d,tx,ty,sinP} */
+  function layerMatrix(k, alphaSelf, t) {
+    const y = layerY(k, t);
+    const cy_ = Math.cos(yaw), sy_ = Math.sin(yaw);
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const depthScale = 1 + 0.05 * (y / (LAYERS.length * Y_STEP)) * sp; // 轻透视感
+    const a = cy_ * U * zoom * depthScale;
+    const b = -sy_ * sp * U * zoom * depthScale;
+    const c = sy_ * U * zoom * depthScale;
+    const d = cy_ * sp * U * zoom * depthScale;
+    const tx = CX, ty = CY - y * cp * U * zoom;
+    const ca = Math.cos(alphaSelf), sa = Math.sin(alphaSelf);
     return {
-      u: [cy, 0, -sy],
-      v: [cp * sy, -sp, cp * cy]
+      a: a * ca + c * sa, b: b * ca + d * sa,
+      c: c * ca - a * sa, d: d * ca - b * sa,
+      tx, ty
     };
   }
-  /* 世界→视图→投影。返回 {x, y, z, k} */
-  function project(p) {
-    const cy = Math.cos(yaw), sy = Math.sin(yaw);
-    const x1 = p[0] * cy + p[2] * sy;
-    const z1 = -p[0] * sy + p[2] * cy;
-    const cp = Math.cos(pitch), sp = Math.sin(pitch);
-    const y2 = p[1] * cp - z1 * sp;
-    const z2 = p[1] * sp + z1 * cp;
-    const persp = 3.6;
-    const k = persp / (persp - z2);
-    return { x: CX + x1 * k * U * zoom, y: CY - y2 * k * U * zoom, z: z2, k };
-  }
-  const depthAlpha = (z) => { const t = Math.max(0, Math.min(1, (z + 1) / 2)); return 0.16 + 0.84 * Math.pow(t, 1.7); };
-
-  /* ─────────── 绘制元素 ─────────── */
-  function drawRingStroke(ring, t, idx) {
-    const phi = ring.tilt + 0.10 * Math.sin(t * 0.13 + idx * 1.7);
-    const psi = t * ring.speed + idx * 2.1;
-    const { u, v } = ringBasis(phi, psi);
-    const N = 108;
-    /* 分 12 段,按深度分组描线 */
-    let prev = null;
-    for (let s = 0; s < 12; s++) {
-      ctx.beginPath();
-      for (let q = 0; q <= N / 12; q++) {
-        const a = (s * N / 12 + q) / N * Math.PI * 2;
-        const p = project([
-          (u[0] * Math.cos(a) + v[0] * Math.sin(a)) * ring.R,
-          (u[1] * Math.cos(a) + v[1] * Math.sin(a)) * ring.R,
-          (u[2] * Math.cos(a) + v[2] * Math.sin(a)) * ring.R
-        ]);
-        if (q === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-      }
-      const aMid = (s + 0.5) / 12 * Math.PI * 2;
-      const pm = project([
-        (u[0] * Math.cos(aMid) + v[0] * Math.sin(aMid)) * ring.R,
-        (u[1] * Math.cos(aMid) + v[1] * Math.sin(aMid)) * ring.R,
-        (u[2] * Math.cos(aMid) + v[2] * Math.sin(aMid)) * ring.R
-      ]);
-      ctx.strokeStyle = ring.color;
-      ctx.globalAlpha = depthAlpha(pm.z) * 0.34;
-      ctx.lineWidth = 1.1;
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-    return { phi, psi, u, v };
-  }
-
-  function drawTrigram(g, x, y, w, lw, color, alpha) {
-    const rows = BAGUA_ROWS[g];
-    const gap = lw * 1.75;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.strokeStyle = color;
-    ctx.globalAlpha = alpha;
-    ctx.lineWidth = lw;
-    ctx.lineCap = 'round';
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 8;
-    /* rows 自上而下 */
-    for (let r = 0; r < 3; r++) {
-      const yy = (r - 1) * gap;
-      if (rows[r] === 1) {
-        ctx.beginPath(); ctx.moveTo(-w / 2, yy); ctx.lineTo(w / 2, yy); ctx.stroke();
-      } else {
-        ctx.beginPath(); ctx.moveTo(-w / 2, yy); ctx.lineTo(-w / 6, yy); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(w / 6, yy); ctx.lineTo(w / 2, yy); ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
-
-  function drawTaiji(cx, cy, r, rot, t) {
-    const pulse = 1 + 0.045 * Math.sin(t * 0.0016);
-    r *= pulse;
-    /* 外晕 */
-    ctx.save();
-    const halo = ctx.createRadialGradient(cx, cy, r * 0.4, cx, cy, r * 2.6);
-    halo.addColorStop(0, 'rgba(232,195,122,0.28)');
-    halo.addColorStop(0.5, 'rgba(232,195,122,0.07)');
-    halo.addColorStop(1, 'rgba(232,195,122,0)');
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(cx, cy, r * 2.6, 0, 6.2832); ctx.fill();
-    /* 光环 */
-    ctx.strokeStyle = 'rgba(232,195,122,0.55)';
-    ctx.lineWidth = 1.2;
-    ctx.shadowColor = 'rgba(232,195,122,0.9)';
-    ctx.shadowBlur = 14;
-    ctx.beginPath(); ctx.arc(cx, cy, r * 1.22, 0, 6.2832); ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    ctx.translate(cx, cy);
-    ctx.rotate(rot);
-    /* 阴底 */
-    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832);
-    ctx.fillStyle = '#0e1330'; ctx.fill();
-    /* 阳半 */
-    ctx.beginPath(); ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false); ctx.closePath();
-    ctx.fillStyle = '#e8c37a';
-    ctx.shadowColor = 'rgba(232,195,122,0.8)'; ctx.shadowBlur = 16;
-    ctx.fill(); ctx.shadowBlur = 0;
-    /* 两仪小圆 */
-    ctx.beginPath(); ctx.arc(0, -r / 2, r / 2, 0, 6.2832); ctx.fill();
-    ctx.beginPath(); ctx.arc(0, r / 2, r / 2, 0, 6.2832); ctx.fillStyle = '#0e1330'; ctx.fill();
-    /* 鱼眼 */
-    ctx.beginPath(); ctx.arc(0, -r / 2, r / 6.5, 0, 6.2832); ctx.fillStyle = '#0e1330'; ctx.fill();
-    ctx.beginPath(); ctx.arc(0, r / 2, r / 6.5, 0, 6.2832); ctx.fillStyle = '#e8c37a'; ctx.fill();
-    ctx.restore();
-  }
-
-  function drawDial(t) {
-    const R = U * zoom * 1.08;
-    ctx.save();
-    /* 底盘双环 */
-    ctx.strokeStyle = 'rgba(232,195,122,0.30)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(CX, CY, R, 0, 6.2832); ctx.stroke();
-    ctx.strokeStyle = 'rgba(232,195,122,0.14)';
-    ctx.beginPath(); ctx.arc(CX, CY, R * 0.985, 0, 6.2832); ctx.stroke();
-    /* 刻度:72 符,主刻度加长 */
-    for (let i = 0; i < 72; i++) {
-      const a = i / 72 * Math.PI * 2 - Math.PI / 2;
-      const major = i % 9 === 0;
-      const r1 = R * 0.975, r0 = r1 - (major ? 9 : 4.5);
-      ctx.strokeStyle = major ? 'rgba(232,195,122,0.5)' : 'rgba(232,195,122,0.22)';
-      ctx.lineWidth = major ? 1.4 : 1;
-      ctx.beginPath();
-      ctx.moveTo(CX + Math.cos(a) * r0, CY + Math.sin(a) * r0);
-      ctx.lineTo(CX + Math.cos(a) * r1, CY + Math.sin(a) * r1);
-      ctx.stroke();
-    }
-    /* 后天方位:上离(南)下坎(北)左震(东)右兑(西) */
-    const dirs = [['离', 0, -1], ['坎', 0, 1], ['震', -1, 0], ['兑', 1, 0],
-      ['巽', -0.72, -0.72], ['坤', -0.72, 0.72], ['乾', 0.72, -0.72], ['艮', 0.72, 0.72]];
-    ctx.font = `${Math.max(11, U * 0.075)}px 'Noto Serif SC','KaiTi',serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    for (const [ch, dx, dy] of dirs) {
-      const x = CX + dx * R * 0.925, y = CY + dy * R * 0.925;
-      ctx.fillStyle = 'rgba(232,195,122,0.42)';
-      ctx.fillText(ch, x, y);
-    }
-    ctx.restore();
+  /* 盘面局部坐标 → 屏幕(用于磁针) */
+  function localToScreen(m, lx, ly) {
+    return { x: m.a * lx + m.c * ly + m.tx, y: m.b * lx + m.d * ly + m.ty };
   }
 
   /* ─────────── 主循环 ─────────── */
   let lastT = performance.now();
   function frame(now) {
     requestAnimationFrame(frame);
-    if (!visible || W === 0) return;
+    if (!visible || document.hidden || W === 0) { lastT = now; return; }
     const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
-    const t = now;
 
-    /* 交互惯性 & 闲时自转 */
     if (!dragging) {
       yaw += vyaw; vyaw *= 0.93;
       if (now - lastInteract > 2600) yaw += 0.05 * dt;
     }
-    zoom += (targetZoom - zoom) * 0.12;
-    const bob = Math.sin(t * 0.0009) * U * 0.012;
-
-    ctx.clearRect(0, 0, W, H);
-    CY = H / 2 + bob;
-    CX = W / 2;
-
-    drawDial(t);
-
-    /* 环轨 + 环上字/卦 */
-    const items = []; // {z, fn}
-    RINGS.forEach((ring, idx) => {
-      const { phi, psi, u, v } = drawRingStroke(ring, t, idx);
-      const n = ring.kind === 'xiu' ? 28 : ring.kind === 'jie' ? 24 : ring.kind === 'zhi' ? 12 : ring.kind === 'gan' ? 10 : 8;
-      for (let i = 0; i < n; i++) {
-        const a = i / n * Math.PI * 2 + t * ring.spin * ring.dir;
-        const ca = Math.cos(a), sa = Math.sin(a);
-        const p = project([
-          (u[0] * ca + v[0] * sa) * ring.R,
-          (u[1] * ca + v[1] * sa) * ring.R,
-          (u[2] * ca + v[2] * sa) * ring.R
-        ]);
-        const alpha = depthAlpha(p.z);
-        if (ring.kind === 'gua') {
-          const g = GUAS[i];
-          items.push({ z: p.z, fn: () => drawTrigram(g, p.x, p.y, ring.size * U * zoom * p.k * 0.62, Math.max(1.6, ring.size * U * zoom * p.k * 0.16), ring.color, alpha) });
-        } else {
-          let text;
-          if (ring.kind === 'xiu') text = LC.XINGXIU[i];
-          else if (ring.kind === 'jie') text = LUNAR_TABLE.solarTerm[i];
-          else if (ring.kind === 'zhi') text = ZHI[i];
-          else text = GAN[i];
-          const px = ring.size * U * zoom * p.k;
-          items.push({ z: p.z, fn: () => {
-            ctx.font = `${px}px 'Noto Serif SC','KaiTi',serif`;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillStyle = ring.color;
-            ctx.globalAlpha = alpha;
-            ctx.shadowColor = ring.color; ctx.shadowBlur = 7 * alpha;
-            ctx.fillText(text, p.x, p.y);
-            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
-          } });
-        }
-      }
-    });
-
-    /* 灵尘 */
-    for (const m of dust) {
-      const A = m.a0 + t * 0.0001 * m.w;
-      const p = project([Math.cos(A) * m.R, m.h, Math.sin(A) * m.R]);
-      items.push({ z: p.z, fn: () => {
-        ctx.globalAlpha = depthAlpha(p.z) * m.al;
-        ctx.fillStyle = m.c;
-        ctx.beginPath(); ctx.arc(p.x, p.y, m.r * p.k, 0, 6.2832); ctx.fill();
-        ctx.globalAlpha = 1;
-      } });
-    }
-
-    /* 远→近绘制 */
-    items.sort((a, b) => a.z - b.z);
-    for (const it of items) it.fn();
-
-    /* 太极天心 */
-    drawTaiji(CX, CY, U * zoom * 0.135, t * 0.0006, t);
+    pitch += (pitchTarget - pitch) * 0.07;
+    zoom += (targetZoom - zoom) * 0.1;
+    drawFrame(now);
   }
 
-  /* 灵尘初始化 */
-  const dust = [];
-  function initDust() {
-    dust.length = 0;
-    for (let i = 0; i < 26; i++) {
-      dust.push({
-        R: 0.2 + Math.random() * 0.95,
-        h: (Math.random() - 0.5) * 1.3,
-        a0: Math.random() * 6.2832,
-        w: (Math.random() < 0.5 ? -1 : 1) * (30 + Math.random() * 70),
-        r: 0.8 + Math.random() * 1.7,
-        al: 0.25 + Math.random() * 0.5,
-        c: Math.random() < 0.6 ? '#e8c37a' : '#7de8a8'
-      });
+  /* 纯绘制(可独立调用,便于性能诊断) */
+  function drawFrame(now) {
+    const sp = Math.sin(pitch);
+    const spinK = 1.2 - sp;   // 合拢时近乎静止(真实罗盘制式)
+
+    ctx.setTransform(px, 0, 0, px, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    CX = W / 2; CY = H * 0.485 + Math.sin(now * 0.0006) * 3;
+
+    /* 整体光晕(单次贴图) */
+    const haloSize = 3.4 * U * zoom;
+    ctx.globalAlpha = 0.9;
+    ctx.drawImage(haloSprite, CX - haloSize / 2, CY - haloSize / 2, haloSize, haloSize);
+    ctx.globalAlpha = 1;
+
+    /* 由下而上贴层(全盘同轴慢旋 —— 真实罗盘各圈层铆合对齐) */
+    const spin = now * 0.000022 * spinK + 0.4;
+    for (let k = 0; k < LAYERS.length; k++) {
+      const layer = LAYERS[k];
+      const m = layerMatrix(k, spin, now);
+      const spr = sprites[layer.id];
+      ctx.save();
+      ctx.setTransform(m.a * px, m.b * px, m.c * px, m.d * px, m.tx * px, m.ty * px);
+      ctx.scale(1 / K, 1 / K);
+      ctx.globalAlpha = layer.kind === 'base' ? 1 : 0.96;
+      ctx.drawImage(spr, -spr.width / 2, -spr.height / 2);
+      ctx.restore();
     }
+
+    /* 磁针(画于天池层坐标系:锁定卯酉线,红针指南,微微游摆) */
+    const topK = LAYERS.length - 1;
+    const nm = layerMatrix(topK, spin, now);
+    const na = Math.sin(now * 0.0009) * 0.05 + Math.sin(now * 0.0021) * 0.02;
+    const ca = Math.cos(na), sa = Math.sin(na);
+    const P = (lx, ly) => localToScreen(nm, lx * ca - ly * sa, lx * sa + ly * ca);
+    const tipS = P(0, -0.19), tipN = P(0, 0.19), w1 = P(0.024, 0.012), w2 = P(-0.024, 0.012);
+    ctx.save();
+    ctx.setTransform(px, 0, 0, px, 0, 0);
+    /* 南针(朱砂,指向盘面上方=午位) */
+    ctx.beginPath();
+    ctx.moveTo(tipS.x, tipS.y); ctx.lineTo(w1.x, w1.y); ctx.lineTo(w2.x, w2.y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(196, 66, 60, 0.95)';
+    ctx.shadowColor = 'rgba(196,66,60,0.8)'; ctx.shadowBlur = 8; ctx.fill();
+    /* 北针(鎏金,指向子位) */
+    ctx.beginPath();
+    ctx.moveTo(tipN.x, tipN.y); ctx.lineTo(w1.x, w1.y); ctx.lineTo(w2.x, w2.y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(240, 220, 170, 0.95)';
+    ctx.shadowColor = 'rgba(240,220,170,0.9)'; ctx.shadowBlur = 8; ctx.fill();
+    ctx.shadowBlur = 0;
+    /* 天心 pivot */
+    ctx.beginPath();
+    ctx.arc((tipN.x + tipS.x) / 2, (tipN.y + tipS.y) / 2, 2.6 * zoom, 0, 6.2832);
+    ctx.fillStyle = GOLD; ctx.fill();
+    ctx.restore();
+
+    ctx.globalAlpha = 1;
   }
 
   /* ─────────── 交互 ─────────── */
@@ -292,7 +379,9 @@
     const dx = e.clientX - lastX, dy = e.clientY - lastY;
     lastX = e.clientX; lastY = e.clientY;
     yaw += dx * 0.006;
-    pitch = Math.max(0.25, Math.min(1.45, pitch + dy * 0.005));
+    /* 上拖(dy<0)增大俯角 → 合拢成正对罗盘;下拖 → 展开分层 */
+    pitchTarget = Math.max(0.42, Math.min(1.53, pitchTarget - dy * 0.006));
+    pitch = Math.max(0.42, Math.min(1.53, pitch - dy * 0.006));
     vyaw = dx * 0.0022;
     lastInteract = performance.now();
   });
@@ -301,25 +390,46 @@
   cv.addEventListener('pointercancel', endDrag);
   cv.addEventListener('wheel', (e) => {
     e.preventDefault();
-    targetZoom = Math.max(0.7, Math.min(1.4, targetZoom * (e.deltaY < 0 ? 1.09 : 0.92)));
+    targetZoom = Math.max(0.72, Math.min(1.45, targetZoom * (e.deltaY < 0 ? 1.09 : 0.92)));
     lastInteract = performance.now();
   }, { passive: false });
 
+  /* 控件:层距滑杆 + 合拢/展开 */
+  const gapRange = document.getElementById('gapRange');
+  if (gapRange) gapRange.addEventListener('input', () => { gapFactor = gapRange.value / 100; });
+  const btnCollapse = document.getElementById('btnCollapse');
+  if (btnCollapse) btnCollapse.addEventListener('click', () => { pitchTarget = 1.52; lastInteract = performance.now(); });
+  const btnExpand = document.getElementById('btnExpand');
+  if (btnExpand) btnExpand.addEventListener('click', () => { pitchTarget = 0.62; lastInteract = performance.now(); });
+
   /* ─────────── 尺寸 ─────────── */
+  /* 性能:内部分辨率封顶(软件渲染友好),CSS 负责放大 */
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
     const rect = cv.getBoundingClientRect();
     W = Math.max(200, rect.width);
     H = Math.max(220, rect.height);
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    CX = W / 2; CY = H / 2;
-    U = Math.min(W, H) * 0.435;
+    const dprRaw = window.devicePixelRatio || 1;
+    dpr = dprRaw;
+    px = Math.min(dprRaw, 1.25) * Math.min(1, 860 / W);
+    cv.width = Math.round(W * px); cv.height = Math.round(H * px);
+    CX = W / 2; CY = H * 0.485;
+    U = Math.min(W * 0.42, H * 0.30);
   }
   new ResizeObserver(resize).observe(cv);
   new IntersectionObserver((es) => { visible = es[0].isIntersecting; }, { threshold: 0.02 }).observe(cv);
 
-  initDust();
+  /* ─────────── 启动 ─────────── */
+  bakeShadows();
+  bakeAll();
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => bakeAll());   // 字体就绪后重烘,保证字形
+  }
   resize();
   requestAnimationFrame(frame);
+
+  /* 性能诊断钩子(不影响运行) */
+  window.__luopanDebug = {
+    drawFrame,
+    set(p, g) { if (p !== undefined) { pitch = pitchTarget = p; } if (g !== undefined) { gapFactor = g; } }
+  };
 })();

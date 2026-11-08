@@ -47,26 +47,9 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: rgba(232,195,122,.45); }
 
 /* ─────────── 背景层 ─────────── */
+/* #sky 静态全景(烘焙一次);#skyfx 特效薄层(流星/灵尘),盖于内容之上 */
 #sky { position: fixed; inset: 0; z-index: 0; width: 100vw; height: 100vh; }
-
-.nebula {
-  position: fixed; z-index: 0; border-radius: 50%;
-  filter: blur(70px); pointer-events: none; opacity: .5;
-  animation: nebulaFloat 26s ease-in-out infinite alternate;
-}
-.n1 { width: 60vw; height: 44vh; left: -12vw; top: -10vh;
-  background: radial-gradient(ellipse at center, rgba(96, 62, 190, .34), transparent 65%); }
-.n2 { width: 52vw; height: 46vh; right: -14vw; top: 16vh;
-  background: radial-gradient(ellipse at center, rgba(28, 96, 150, .30), transparent 65%);
-  animation-delay: -9s; animation-duration: 32s; }
-.n3 { width: 46vw; height: 36vh; left: 22vw; bottom: -14vh;
-  background: radial-gradient(ellipse at center, rgba(190, 130, 44, .14), transparent 65%);
-  animation-delay: -17s; animation-duration: 38s; }
-
-@keyframes nebulaFloat {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to   { transform: translate3d(3vw, -2.4vh, 0) scale(1.08); }
-}
+#skyfx { position: fixed; inset: 0; z-index: 3; width: 100vw; height: 100vh; pointer-events: none; }
 
 .vignette {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
@@ -169,18 +152,20 @@ main { position: relative; z-index: 2; max-width: 1280px; margin: 0 auto; paddin
 .day-panel { padding: 24px 24px 18px; display: flex; flex-direction: column; }
 
 .term-banner {
+  position: relative;
   border-radius: 14px; padding: 12px 18px; margin-bottom: 16px;
   background: linear-gradient(120deg, rgba(125, 232, 168, .16), rgba(125, 232, 168, .05));
   border: 1px solid rgba(125, 232, 168, .35);
-  animation: termGlow 3.2s ease-in-out infinite alternate;
+}
+.term-banner::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 24px rgba(125, 232, 168, .35);
+  animation: termGlow 4.5s ease-in-out infinite alternate;
 }
 .term-banner .t-name { font-family: var(--f-title); font-size: 22px; letter-spacing: 4px; color: var(--jade); }
 .term-banner .t-time { font-size: 12.5px; color: var(--muted); margin-left: 10px; }
 .term-banner .t-desc { font-size: 12.5px; color: rgba(220, 223, 235, .82); margin-top: 3px; }
-@keyframes termGlow {
-  from { box-shadow: 0 0 10px rgba(125, 232, 168, .12); }
-  to { box-shadow: 0 0 24px rgba(125, 232, 168, .3); }
-}
+@keyframes termGlow { from { opacity: .12; } to { opacity: .5; } }
 .hidden { display: none !important; }
 
 .date-hero { margin-bottom: 14px; }
@@ -261,10 +246,27 @@ main { position: relative; z-index: 2; max-width: 1280px; margin: 0 auto; paddin
 .compass-panel { position: relative; overflow: hidden; height: clamp(500px, 76vh, 720px); }
 #luopan {
   position: absolute; left: 10px; top: 10px;
-  width: calc(100% - 20px); height: calc(100% - 56px);
+  width: calc(100% - 20px); height: calc(100% - 92px);
   display: block; touch-action: none; cursor: grab;
 }
 #luopan:active { cursor: grabbing; }
+.compass-ctrl {
+  position: absolute; left: 0; right: 0; bottom: 34px;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+}
+.btn.mini { font-size: 12.5px; padding: 4px 14px; border-radius: 8px; letter-spacing: 3px; }
+.gap-slider { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; letter-spacing: 3px; color: rgba(232,195,122,.6); }
+.gap-slider input[type="range"] {
+  width: 130px; height: 4px; appearance: none; -webkit-appearance: none;
+  background: linear-gradient(90deg, rgba(232,195,122,.7), rgba(232,195,122,.2));
+  border-radius: 4px; outline: none; cursor: pointer;
+}
+.gap-slider input[type="range"]::-webkit-slider-thumb {
+  appearance: none; -webkit-appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 10px rgba(232,195,122,.8);
+  border: none;
+}
 .compass-hint {
   position: absolute; left: 0; right: 0; bottom: 12px;
   text-align: center; font-size: 12px; letter-spacing: 4px; color: rgba(232, 195, 122, .55);
