@@ -1,9 +1,10 @@
 /* ═══════════════════════════════════════════════
- * 三维分层罗盘 luopan.js  v2 · 真实罗盘制式
+ * 三维分层罗盘 luopan.js  v3 · 珐琅鎏金制式
  * 外盘方座 + 七层盘面悬浮展开(爆炸图式)
  *   底座 → 二十八宿 → 廿四节气 → 二十四山
  *        → 洛书九星 → 先天八卦 → 天池磁针
- * 性能:全部盘面预烘离屏精灵,每帧仅仿射贴图
+ * 视觉:每层珐琅釉色渐变 · 多重细金线 · 密集刻度环 · 扇界珠饰
+ * 性能:全部盘面预烘离屏精灵,每帧仅十余次仿射贴图
  * 交互:拖动旋转视角(上拖合拢/下拖展开)· 滚轮缩放 · 层距调节
  * ═══════════════════════════════════════════════ */
 (function () {
@@ -24,15 +25,21 @@
   const GOLD = '#e8c37a', GOLD_HI = '#f7e3b1', RED = 'rgba(186,62,58,';
   const FONT = "'Noto Serif SC','KaiTi','STKaiti',serif";
 
-  /* 层定义:自下而上。rIn/rOut 为圈层带半径,unit 为盘单位半径 */
+  /* 层定义:自下而上。rIn/rOut 圈层带,unit 为盘单位半径
+   * tintIn/tintOut:圈带珐琅釉色渐变(内→外) */
   const LAYERS = [
     { id: 'base',    kind: 'base', R: 1.36, rot: 0 },
-    { id: 'xiu',     kind: 'ring', R: 1.20, rIn: 0.985, rOut: 1.165, n: 28, text: XIU,  color: '#9fc6ff', fs: 0.062, rot: 0.028,  start: 90 },
-    { id: 'jie',     kind: 'ring', R: 0.99, rIn: 0.805, rOut: 0.975, n: 24, text: JIE,  color: '#7de8a8', fs: 0.055, rot: -0.022, start: 195, two: true },
-    { id: 'shan',    kind: 'ring', R: 0.80, rIn: 0.605, rOut: 0.795, n: 24, text: SHAN, color: GOLD_HI,   fs: 0.100, rot: 0.016,  start: 165 },
-    { id: 'luoshu',  kind: 'ring', R: 0.60, rIn: 0.435, rOut: 0.595, n: 8,  text: LUOSHU, color: '#6fd3ff', fs: 0.070, rot: -0.026, start: 0, two: true },
-    { id: 'bagua',   kind: 'bagua', R: 0.44, rIn: 0.175, rOut: 0.435, n: 8, text: BAGUA, color: '#f0a56a', rot: 0.034, start: 0 },
-    { id: 'tianchi', kind: 'tianchi', R: 0.30, rot: -0.02 }
+    { id: 'xiu',     kind: 'ring', R: 1.20, rIn: 0.975, rOut: 1.155, n: 28, text: XIU,  color: '#b4d4ff', fs: 0.070, start: 90,  two: false,
+      tintIn: 'rgba(30,48,102,0.92)',  tintOut: 'rgba(12,20,52,0.94)',  edge: '#8fb8ff' },
+    { id: 'jie',     kind: 'ring', R: 0.99, rIn: 0.795, rOut: 0.970, n: 24, text: JIE,  color: '#93f0bc', fs: 0.064, start: 195, two: true,
+      tintIn: 'rgba(16,66,50,0.92)',   tintOut: 'rgba(8,38,30,0.94)',   edge: '#7de8a8' },
+    { id: 'shan',    kind: 'ring', R: 0.80, rIn: 0.585, rOut: 0.790, n: 24, text: SHAN, color: '#ffe6a8', fs: 0.118, start: 165, two: false, hero: true,
+      tintIn: 'rgba(96,68,22,0.92)',   tintOut: 'rgba(44,30,10,0.94)',  edge: '#e8c37a' },
+    { id: 'luoshu',  kind: 'ring', R: 0.60, rIn: 0.425, rOut: 0.590, n: 8,  text: LUOSHU, color: '#93d8ff', fs: 0.080, start: 0, two: true,
+      tintIn: 'rgba(22,54,96,0.92)',   tintOut: 'rgba(10,30,58,0.94)',  edge: '#6fd3ff' },
+    { id: 'bagua',   kind: 'bagua', R: 0.44, rIn: 0.170, rOut: 0.435, n: 8,  text: BAGUA, color: '#ffbe86', start: 0,
+      tintIn: 'rgba(84,46,20,0.92)',   tintOut: 'rgba(40,22,10,0.94)',  edge: '#f0a56a' },
+    { id: 'tianchi', kind: 'tianchi', R: 0.30 }
   ];
   const MID = (LAYERS.length - 1) / 2;
 
@@ -48,63 +55,114 @@
     c.width = w; c.height = h;
     return c;
   }
+
+  /* 通用:圈带珐琅底 + 双重金缘 + 辐线 + 刻度环 + 扇界珠饰 */
+  function paintRingFace(g, layer) {
+    const rIn = rr(layer.rIn), rOut = rr(layer.rOut), rD = rr(layer.R - 0.012);
+    /* 珐琅釉色渐变 */
+    const gr = g.createRadialGradient(0, 0, rIn, 0, 0, rD);
+    gr.addColorStop(0, layer.tintIn);
+    gr.addColorStop(1, layer.tintOut);
+    g.beginPath();
+    g.arc(0, 0, rD, 0, 6.2832);
+    g.arc(0, 0, rIn, 0, 6.2832, true);
+    g.fillStyle = gr;
+    g.fill();
+
+    /* 外缘:鎏金双环 */
+    g.beginPath(); g.arc(0, 0, rD, 0, 6.2832);
+    g.strokeStyle = 'rgba(232,195,122,0.95)'; g.lineWidth = 3;
+    g.shadowColor = 'rgba(232,195,122,0.85)'; g.shadowBlur = 13; g.stroke();
+    g.shadowBlur = 0;
+    g.beginPath(); g.arc(0, 0, rD - 5, 0, 6.2832);
+    g.strokeStyle = 'rgba(232,195,122,0.30)'; g.lineWidth = 1; g.stroke();
+    /* 内缘:亮线 + 柔线 */
+    g.beginPath(); g.arc(0, 0, rIn, 0, 6.2832);
+    g.strokeStyle = 'rgba(232,195,122,0.55)'; g.lineWidth = 1.6;
+    g.shadowColor = 'rgba(232,195,122,0.5)'; g.shadowBlur = 7; g.stroke();
+    g.shadowBlur = 0;
+    g.beginPath(); g.arc(0, 0, rIn + 4, 0, 6.2832);
+    g.strokeStyle = 'rgba(232,195,122,0.16)'; g.lineWidth = 1; g.stroke();
+
+    /* 外缘细刻度环(余量区) */
+    const tickN = layer.hero ? 96 : 72;
+    for (let i = 0; i < tickN; i++) {
+      const a = i / tickN * 6.2832;
+      const major = i % (tickN / (layer.hero ? 24 : 12)) === 0;
+      const r1 = rD - 3.5, r0 = r1 - (major ? 9 : 5);
+      g.beginPath();
+      g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+      g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+      g.strokeStyle = major ? 'rgba(232,195,122,0.65)' : 'rgba(232,195,122,0.26)';
+      g.lineWidth = major ? 1.8 : 1;
+      g.stroke();
+    }
+
+    /* 辐条分区线(对齐文字起始角) */
+    const n = layer.n, step = Math.PI * 2 / n;
+    const a0 = layer.start * Math.PI / 180 - Math.PI / 2;
+    g.strokeStyle = 'rgba(232,195,122,0.30)';
+    g.lineWidth = layer.hero ? 1.8 : 1.2;
+    for (let i = 0; i < n; i++) {
+      const a = a0 + i * step;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * (rIn + 3), Math.sin(a) * (rIn + 3));
+      g.lineTo(Math.cos(a) * (rD - 5), Math.sin(a) * (rD - 5));
+      g.stroke();
+    }
+    /* 扇区中线(若每扇区两行字则分隔) */
+    if (layer.two) {
+      g.strokeStyle = 'rgba(232,195,122,0.12)'; g.lineWidth = 1;
+      for (let i = 0; i < n; i++) {
+        const a = a0 + (i + 0.5) * step;
+        g.beginPath();
+        g.moveTo(Math.cos(a) * (rIn + 3), Math.sin(a) * (rIn + 3));
+        g.lineTo(Math.cos(a) * (rOut - 2), Math.sin(a) * (rOut - 2));
+        g.stroke();
+      }
+    }
+    /* 扇界珠饰 */
+    const rMid = (layer.rIn + layer.rOut) / 2;
+    g.fillStyle = GOLD;
+    g.shadowColor = 'rgba(232,195,122,0.9)'; g.shadowBlur = 6;
+    for (let i = 0; i < n; i++) {
+      const a = a0 + i * step;
+      g.beginPath();
+      g.arc(Math.cos(a) * rr(rMid), Math.sin(a) * rr(rMid), layer.hero ? 3 : 2.2, 0, 6.2832);
+      g.fill();
+    }
+    g.shadowBlur = 0;
+  }
+
   function bakeDisc(layer) {
     const size = Math.ceil(layer.R * 2 * K) + 8;
     const c = mkCanvas(size, size);
     const g = c.getContext('2d');
-    const cx = size / 2, cy = size / 2, k = K;
-    g.translate(cx, cy);
+    g.translate(size / 2, size / 2);
 
-    if (layer.kind === 'base') return bakeBase(c, g, k);
-    if (layer.kind === 'tianchi') return bakeTianchi(c, g, k);
+    if (layer.kind === 'base') return bakeBase(c, g);
+    if (layer.kind === 'tianchi') return bakeTianchi(c, g);
 
-    /* 盘面:半透明琉璃圈带 */
-    g.beginPath();
-    g.arc(0, 0, rr(layer.R - 0.012), 0, 6.2832);
-    g.arc(0, 0, rr(layer.rIn + 0.008), 0, 6.2832, true);
-    g.fillStyle = 'rgba(9, 12, 28, 0.80)';
-    g.fill();
-    /* 内孔微光 */
-    g.beginPath(); g.arc(0, 0, rr(layer.rIn + 0.008), 0, 6.2832);
-    g.strokeStyle = 'rgba(232,195,122,0.14)'; g.lineWidth = 1.5; g.stroke();
+    paintRingFace(g, layer);
 
-    /* 外缘金环(烘焙光晕) */
-    g.beginPath(); g.arc(0, 0, rr(layer.R - 0.012), 0, 6.2832);
-    g.strokeStyle = 'rgba(232,195,122,0.85)'; g.lineWidth = 2.6;
-    g.shadowColor = 'rgba(232,195,122,0.8)'; g.shadowBlur = 12; g.stroke();
-    g.shadowBlur = 0;
-    g.beginPath(); g.arc(0, 0, rr(layer.R - 0.012) - 4, 0, 6.2832);
-    g.strokeStyle = 'rgba(232,195,122,0.22)'; g.lineWidth = 1; g.stroke();
+    if (layer.kind === 'bagua') { bakeBagua(g, layer); return c; }
 
-    /* 辐条分区线(与文字起始角对齐,字符位于扇区中央) */
-    const n = layer.n, step = Math.PI * 2 / n;
-    const a0 = layer.start * Math.PI / 180 - Math.PI / 2;
-    for (let i = 0; i < n; i++) {
-      const a = a0 + i * step;
-      g.beginPath();
-      g.moveTo(Math.cos(a) * rr(layer.rIn + 0.01), Math.sin(a) * rr(layer.rIn + 0.01));
-      g.lineTo(Math.cos(a) * rr(layer.rOut - 0.01), Math.sin(a) * rr(layer.rOut - 0.01));
-      g.strokeStyle = 'rgba(232,195,122,0.20)';
-      g.lineWidth = layer.id === 'shan' ? 1.6 : 1;
-      g.stroke();
-    }
-
-    if (layer.kind === 'bagua') { bakeBagua(g, layer, k); return c; }
-
-    /* 环上文字:字头朝外 */
+    /* 环上文字:字头朝外,鎏光 */
     const rMid = (layer.rIn + layer.rOut) / 2;
+    const n = layer.n, step = Math.PI * 2 / n;
     g.fillStyle = layer.color;
-    g.shadowColor = layer.color; g.shadowBlur = 7;
+    g.shadowColor = layer.hero ? 'rgba(255,214,130,0.95)' : layer.color;
+    g.shadowBlur = layer.hero ? 10 : 7;
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = `600 ${Math.round(rr(layer.fs))}px ${FONT}`;
+    g.font = `${layer.hero ? 900 : 600} ${Math.round(rr(layer.fs))}px ${FONT}`;
     for (let i = 0; i < n; i++) {
       const a = (layer.start * Math.PI / 180) + (i + 0.5) * step;
       g.save();
       g.rotate(a);
-      g.translate(0, -rr(rMid));   // 该处字头朝外(上方)
+      g.translate(0, -rr(rMid));
       const txt = layer.text[i];
       if (layer.two) {
-        const half = rr(layer.fs) * 0.62;
+        const half = rr(layer.fs) * 0.60;
         g.fillText(txt[0], 0, -half);
         g.fillText(txt[1], 0, half);
       } else {
@@ -113,25 +171,11 @@
       g.restore();
     }
     g.shadowBlur = 0;
-
-    /* 二十八宿盘:外缘细分刻度环 */
-    if (layer.id === 'xiu') {
-      for (let i = 0; i < 72; i++) {
-        const a = i / 72 * Math.PI * 2;
-        const r0 = rr(layer.R - 0.052), r1 = rr(layer.R - 0.028);
-        g.beginPath();
-        g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
-        g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
-        g.strokeStyle = i % 9 === 0 ? 'rgba(159,198,255,0.6)' : 'rgba(159,198,255,0.22)';
-        g.lineWidth = i % 9 === 0 ? 2 : 1;
-        g.stroke();
-      }
-    }
     return c;
   }
 
   /* 先天八卦:三爻横条(垂直于半径)+ 卦名 */
-  function bakeBagua(g, layer, k) {
+  function bakeBagua(g, layer) {
     const n = 8, step = Math.PI * 2 / n;
     for (let i = 0; i < n; i++) {
       const a = (layer.start * Math.PI / 180) + (i + 0.5) * step;
@@ -140,13 +184,13 @@
       g.translate(0, -rr((layer.rIn + layer.rOut) / 2));
       const name = layer.text[i];
       const rows = BAGUA_ROWS[name];
-      const w = rr(0.135), lw = rr(0.02), gap = rr(0.045);
+      const w = rr(0.150), lw = rr(0.024), gap = rr(0.052);
       g.strokeStyle = layer.color;
-      g.shadowColor = layer.color; g.shadowBlur = 6;
+      g.shadowColor = layer.color; g.shadowBlur = 8;
       g.lineCap = 'round';
       g.lineWidth = lw;
       for (let r = 0; r < 3; r++) {   // 自外向内为上爻→下爻
-        const yy = -rr(0.022) + (r - 1) * gap;
+        const yy = -rr(0.030) + (r - 1) * gap;
         if (rows[r] === 1) {
           g.beginPath(); g.moveTo(-w / 2, yy); g.lineTo(w / 2, yy); g.stroke();
         } else {
@@ -155,80 +199,155 @@
         }
       }
       /* 卦名 */
-      g.shadowBlur = 5;
+      g.shadowBlur = 6;
       g.fillStyle = layer.color;
-      g.font = `600 ${Math.round(rr(0.062))}px ${FONT}`;
+      g.font = `900 ${Math.round(rr(0.070))}px ${FONT}`;
       g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(name, 0, rr(0.135));
+      g.fillText(name, 0, rr(0.150));
       g.restore();
     }
     g.shadowBlur = 0;
   }
 
-  /* 外盘方座:天圆地方 · 红十字定向线 · 四角添盘 */
-  function bakeBase(c, g, k) {
+  /* 外盘方座:木釉底 · 鎏金重缘 · 红十字定向 · 四角添盘 */
+  function bakeBase(c, g) {
     const half = rr(1.34);
-    g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = 26;
-    g.fillStyle = 'rgba(15, 11, 22, 0.88)';
+    /* 投影 */
+    g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowBlur = 30;
+    /* 木釉渐变底 */
+    const wd = g.createLinearGradient(-half, -half, half, half);
+    wd.addColorStop(0, 'rgba(46, 32, 20, 0.95)');
+    wd.addColorStop(0.5, 'rgba(28, 19, 13, 0.95)');
+    wd.addColorStop(1, 'rgba(16, 11, 8, 0.95)');
+    g.fillStyle = wd;
     g.beginPath();
-    if (g.roundRect) g.roundRect(-half, -half, half * 2, half * 2, 14);
+    if (g.roundRect) g.roundRect(-half, -half, half * 2, half * 2, 16);
     else g.rect(-half, -half, half * 2, half * 2);
     g.fill();
     g.shadowBlur = 0;
-    /* 双层金边 */
-    g.strokeStyle = 'rgba(232,195,122,0.8)'; g.lineWidth = 3;
+    /* 内里暗晕(中心微亮) */
+    const cg = g.createRadialGradient(0, 0, half * 0.1, 0, 0, half);
+    cg.addColorStop(0, 'rgba(70, 50, 30, 0.30)');
+    cg.addColorStop(1, 'rgba(0,0,0,0.25)');
+    g.fillStyle = cg;
     g.beginPath();
-    if (g.roundRect) g.roundRect(-half + 3, -half + 3, half * 2 - 6, half * 2 - 6, 12);
+    if (g.roundRect) g.roundRect(-half, -half, half * 2, half * 2, 16);
+    else g.rect(-half, -half, half * 2, half * 2);
+    g.fill();
+    /* 錾刻纹:同心圈 + 二十四放射暗线 */
+    g.strokeStyle = 'rgba(232,195,122,0.09)'; g.lineWidth = 1;
+    for (const r0 of [0.42, 0.72, 1.02, 1.24]) {
+      g.beginPath(); g.arc(0, 0, rr(r0), 0, 6.2832); g.stroke();
+    }
+    g.strokeStyle = 'rgba(232,195,122,0.055)';
+    for (let i = 0; i < 24; i++) {
+      const a = i / 24 * 6.2832;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * rr(0.2), Math.sin(a) * rr(0.2));
+      g.lineTo(Math.cos(a) * rr(1.28), Math.sin(a) * rr(1.28));
+      g.stroke();
+    }
+    /* 鎏金重缘 ×2 */
+    g.strokeStyle = 'rgba(232,195,122,0.95)'; g.lineWidth = 3.5;
+    g.shadowColor = 'rgba(232,195,122,0.8)'; g.shadowBlur = 14;
+    g.beginPath();
+    if (g.roundRect) g.roundRect(-half + 3, -half + 3, half * 2 - 6, half * 2 - 6, 14);
     else g.rect(-half + 3, -half + 3, half * 2 - 6, half * 2 - 6);
     g.stroke();
-    g.strokeStyle = 'rgba(232,195,122,0.25)'; g.lineWidth = 1;
+    g.shadowBlur = 0;
+    g.strokeStyle = 'rgba(232,195,122,0.35)'; g.lineWidth = 1.2;
     g.beginPath();
-    if (g.roundRect) g.roundRect(-half + 12, -half + 12, half * 2 - 24, half * 2 - 24, 9);
-    else g.rect(-half + 12, -half + 12, half * 2 - 24, half * 2 - 24);
+    if (g.roundRect) g.roundRect(-half + 13, -half + 13, half * 2 - 26, half * 2 - 26, 10);
+    else g.rect(-half + 13, -half + 13, half * 2 - 26, half * 2 - 26);
     g.stroke();
-    /* 红十字定向线 */
-    g.strokeStyle = RED + '0.85)'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(-half + 14, 0); g.lineTo(half - 14, 0); g.stroke();
-    g.beginPath(); g.moveTo(0, -half + 14); g.lineTo(0, half - 14); g.stroke();
-    g.strokeStyle = RED + '0.35)'; g.lineWidth = 1;
-    for (const d of [-0.62, 0.62]) {
-      g.beginPath(); g.moveTo(-half + 14, d * k); g.lineTo(half - 14, d * k); g.stroke();
-      g.beginPath(); g.moveTo(d * k, -half + 14); g.lineTo(d * k, half - 14); g.stroke();
+    /* 朱砂十字定向线 + 平行细线 */
+    g.strokeStyle = RED + '0.9)'; g.lineWidth = 2.4;
+    g.shadowColor = 'rgba(200,70,60,0.7)'; g.shadowBlur = 8;
+    g.beginPath(); g.moveTo(-half + 15, 0); g.lineTo(half - 15, 0); g.stroke();
+    g.beginPath(); g.moveTo(0, -half + 15); g.lineTo(0, half - 15); g.stroke();
+    g.shadowBlur = 0;
+    g.strokeStyle = RED + '0.4)'; g.lineWidth = 1;
+    for (const d of [-0.60, -0.30, 0.30, 0.60]) {
+      g.beginPath(); g.moveTo(-half + 15, d * K); g.lineTo(half - 15, d * K); g.stroke();
+      g.beginPath(); g.moveTo(d * K, -half + 15); g.lineTo(d * K, half - 15); g.stroke();
     }
-    /* 四角添盘(装饰圆) */
+    /* 四角添盘:三重环 + 花瓣刻 */
     for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const x = sx * half * 0.66, y = sy * half * 0.66;
-      g.beginPath(); g.arc(x, y, rr(0.085), 0, 6.2832);
-      g.fillStyle = 'rgba(26, 19, 34, 0.9)'; g.fill();
-      g.strokeStyle = 'rgba(232,195,122,0.55)'; g.lineWidth = 1.6; g.stroke();
-      g.beginPath(); g.arc(x, y, rr(0.045), 0, 6.2832);
-      g.strokeStyle = RED + '0.7)'; g.lineWidth = 1.2; g.stroke();
+      const x = sx * half * 0.64, y = sy * half * 0.64;
+      g.beginPath(); g.arc(x, y, rr(0.105), 0, 6.2832);
+      g.fillStyle = 'rgba(30, 21, 15, 0.95)'; g.fill();
+      g.strokeStyle = 'rgba(232,195,122,0.75)'; g.lineWidth = 2; g.stroke();
+      g.beginPath(); g.arc(x, y, rr(0.070), 0, 6.2832);
+      g.strokeStyle = 'rgba(232,195,122,0.35)'; g.lineWidth = 1; g.stroke();
+      /* 花瓣刻 8 */
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * 6.2832 + 0.39;
+        g.beginPath();
+        g.moveTo(x + Math.cos(a) * rr(0.048), y + Math.sin(a) * rr(0.048));
+        g.lineTo(x + Math.cos(a) * rr(0.066), y + Math.sin(a) * rr(0.066));
+        g.strokeStyle = 'rgba(232,195,122,0.5)'; g.lineWidth = 1.4; g.stroke();
+      }
+      g.beginPath(); g.arc(x, y, rr(0.026), 0, 6.2832);
+      g.fillStyle = RED + '0.85)'; g.fill();
+    }
+    /* 四边中点菱形钉 */
+    g.fillStyle = GOLD;
+    for (const [ex, ey] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+      const x = ex * (half - 7.5), y = ey * (half - 7.5);
+      g.save();
+      g.translate(x, y);
+      g.rotate(Math.atan2(ey, ex));
+      g.beginPath();
+      g.moveTo(-7, 0); g.lineTo(0, -4.2); g.lineTo(7, 0); g.lineTo(0, 4.2);
+      g.closePath(); g.fill();
+      g.restore();
     }
     return c;
   }
 
-  /* 天池:太极伏针 */
-  function bakeTianchi(c, g, k) {
-    const R = 0.30 * k;
-    /* 盘体 */
+  /* 天池:水纹池 · 太极 · 时辰珠 */
+  function bakeTianchi(c, g) {
+    const R = 0.30 * K;
+    /* 盘体珐琅 */
+    const body = g.createRadialGradient(0, 0, R * 0.3, 0, 0, R);
+    body.addColorStop(0, 'rgba(40, 30, 66, 0.95)');
+    body.addColorStop(1, 'rgba(10, 8, 26, 0.96)');
     g.beginPath(); g.arc(0, 0, R, 0, 6.2832);
-    g.fillStyle = 'rgba(9, 12, 28, 0.92)'; g.fill();
-    g.strokeStyle = 'rgba(232,195,122,0.9)'; g.lineWidth = 2.8;
-    g.shadowColor = 'rgba(232,195,122,0.9)'; g.shadowBlur = 14; g.stroke();
+    g.fillStyle = body; g.fill();
+    g.strokeStyle = 'rgba(232,195,122,0.95)'; g.lineWidth = 3;
+    g.shadowColor = 'rgba(232,195,122,0.9)'; g.shadowBlur = 15; g.stroke();
     g.shadowBlur = 0;
-    /* 天池内圈 + 卯酉十字红线 */
+    g.beginPath(); g.arc(0, 0, R - 6, 0, 6.2832);
+    g.strokeStyle = 'rgba(232,195,122,0.30)'; g.lineWidth = 1; g.stroke();
+    /* 时辰珠 12 */
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * 6.2832;
+      g.beginPath();
+      g.arc(Math.cos(a) * R * 0.82, Math.sin(a) * R * 0.82, 2.4, 0, 6.2832);
+      g.fillStyle = i % 3 === 0 ? 'rgba(232,195,122,0.9)' : 'rgba(232,195,122,0.45)';
+      g.fill();
+    }
+    /* 水纹池 */
+    const pool = g.createRadialGradient(-R * 0.15, -R * 0.15, R * 0.05, 0, 0, R * 0.66);
+    pool.addColorStop(0, 'rgba(70, 44, 110, 0.95)');
+    pool.addColorStop(0.6, 'rgba(34, 22, 62, 0.95)');
+    pool.addColorStop(1, 'rgba(12, 8, 28, 0.95)');
     g.beginPath(); g.arc(0, 0, R * 0.66, 0, 6.2832);
-    g.fillStyle = 'rgba(16, 20, 44, 0.95)'; g.fill();
-    g.strokeStyle = RED + '0.75)'; g.lineWidth = 1.6;
+    g.fillStyle = pool; g.fill();
+    g.strokeStyle = RED + '0.85)'; g.lineWidth = 1.8;
+    g.beginPath(); g.arc(0, 0, R * 0.66, 0, 6.2832); g.stroke();
+    /* 卯酉十字红线 */
+    g.strokeStyle = RED + '0.8)'; g.lineWidth = 1.6;
     g.beginPath(); g.moveTo(-R * 0.66, 0); g.lineTo(R * 0.66, 0); g.stroke();
     g.beginPath(); g.moveTo(0, -R * 0.66); g.lineTo(0, R * 0.66); g.stroke();
-    g.strokeStyle = 'rgba(232,195,122,0.5)'; g.lineWidth = 1.2;
-    g.beginPath(); g.arc(0, 0, R * 0.66, 0, 6.2832); g.stroke();
     /* 太极 */
-    const r = R * 0.46;
-    g.beginPath(); g.arc(0, 0, r, 0, 6.2832); g.fillStyle = '#0d1130'; g.fill();
+    const r = R * 0.50;
+    g.beginPath(); g.arc(0, 0, r, 0, 6.2832);
+    g.fillStyle = '#0d1130'; g.fill();
+    g.strokeStyle = 'rgba(232,195,122,0.65)'; g.lineWidth = 1.4; g.stroke();
     g.beginPath(); g.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false); g.closePath();
-    g.fillStyle = GOLD; g.shadowColor = 'rgba(232,195,122,0.85)'; g.shadowBlur = 12; g.fill();
+    g.fillStyle = GOLD;
+    g.shadowColor = 'rgba(232,195,122,0.9)'; g.shadowBlur = 14; g.fill();
     g.beginPath(); g.arc(0, -r / 2, r / 2, 0, 6.2832); g.fill();
     g.shadowBlur = 0;
     g.beginPath(); g.arc(0, r / 2, r / 2, 0, 6.2832); g.fillStyle = '#0d1130'; g.fill();
@@ -237,17 +356,39 @@
     return c;
   }
 
-  function bakeShadows() {
-    /* 整体背景光晕精灵(单次贴图,替代逐层柔影) */
-    const s = 512;
+  function bakeHalo() {
+    /* 背景装饰:星轨环 + 环间星点(细实环不依赖大半径渐变,无色带之虞) */
+    const s = 1024;
     haloSprite = mkCanvas(s, s);
     const g = haloSprite.getContext('2d');
-    const grad = g.createRadialGradient(s / 2, s / 2, s * 0.08, s / 2, s / 2, s / 2);
-    grad.addColorStop(0, 'rgba(232,195,122,0.13)');
-    grad.addColorStop(0.45, 'rgba(120,90,180,0.08)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = grad;
-    g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, 6.2832); g.fill();
+    g.translate(s / 2, s / 2);
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    /* 四重星轨 */
+    const rings = [
+      [0.30, 'rgba(160,130,225,0.20)', 1.6],
+      [0.48, 'rgba(140,110,215,0.15)', 1.3],
+      [0.68, 'rgba(130,100,205,0.11)', 1.1],
+      [0.90, 'rgba(232,195,122,0.13)', 1.2]
+    ];
+    for (const [r0, col, lw] of rings) {
+      g.beginPath(); g.arc(0, 0, s * 0.5 * r0, 0, 6.2832);
+      g.strokeStyle = col; g.lineWidth = lw;
+      g.shadowColor = col; g.shadowBlur = 8;
+      g.stroke();
+    }
+    g.shadowBlur = 0;
+    /* 环间星点(疏密随机,金蓝相间) */
+    for (let i = 0; i < 130; i++) {
+      const t = 0.16 + rnd() * 0.80;
+      const a = rnd() * 6.2832;
+      const x = Math.cos(a) * s * 0.5 * t, y = Math.sin(a) * s * 0.5 * t;
+      const r0 = rnd() < 0.75 ? 1.1 + rnd() * 1.3 : 2.2 + rnd() * 1.4;
+      g.globalAlpha = 0.16 + rnd() * 0.4;
+      g.fillStyle = rnd() < 0.6 ? '#cfe0ff' : '#e8c37a';
+      g.beginPath(); g.arc(x, y, r0, 0, 6.2832); g.fill();
+    }
+    g.globalAlpha = 1;
   }
 
   function bakeAll() {
@@ -256,19 +397,19 @@
 
   /* ─────────── 视图状态 ─────────── */
   let W = 0, H = 0, CX = 0, CY = 0, U = 0, dpr = 1, px = 1;
-  let yaw = -0.55, pitch = 0.95, pitchTarget = 0.95;
+  let yaw = -0.55, pitch = 0.98, pitchTarget = 0.98;
   let zoom = 1, targetZoom = 1;
   let gapFactor = 1.0;
   let vyaw = 0, dragging = false, lastX = 0, lastY = 0, lastInteract = -1e9;
   let visible = true;
 
   /* 层世界高度(单位) */
-  const Y_STEP = 0.30;
+  const Y_STEP = 0.27;
   function layerY(k, t) {
-    const bob = Math.sin(t * 0.0009 + k * 0.9) * 0.012;
+    const bob = Math.sin(t * 0.0009 + k * 0.9) * 0.011;
     return (k - MID) * Y_STEP * gapFactor + bob;
   }
-  /* 仿射矩阵:盘面(unit) → 屏幕。返回 {a,b,c,d,tx,ty,sinP} */
+  /* 仿射矩阵:盘面(unit) → 屏幕。返回 {a,b,c,d,tx,ty} */
   function layerMatrix(k, alphaSelf, t) {
     const y = layerY(k, t);
     const cy_ = Math.cos(yaw), sy_ = Math.sin(yaw);
@@ -316,11 +457,9 @@
     ctx.clearRect(0, 0, W, H);
     CX = W / 2; CY = H * 0.485 + Math.sin(now * 0.0006) * 3;
 
-    /* 整体光晕(单次贴图) */
-    const haloSize = 3.4 * U * zoom;
-    ctx.globalAlpha = 0.9;
+    /* 背景星轨环(单次贴图) */
+    const haloSize = 4.6 * U * zoom;
     ctx.drawImage(haloSprite, CX - haloSize / 2, CY - haloSize / 2, haloSize, haloSize);
-    ctx.globalAlpha = 1;
 
     /* 由下而上贴层(全盘同轴慢旋 —— 真实罗盘各圈层铆合对齐) */
     const spin = now * 0.000022 * spinK + 0.4;
@@ -331,7 +470,7 @@
       ctx.save();
       ctx.setTransform(m.a * px, m.b * px, m.c * px, m.d * px, m.tx * px, m.ty * px);
       ctx.scale(1 / K, 1 / K);
-      ctx.globalAlpha = layer.kind === 'base' ? 1 : 0.96;
+      ctx.globalAlpha = layer.kind === 'base' ? 1 : 0.97;
       ctx.drawImage(spr, -spr.width / 2, -spr.height / 2);
       ctx.restore();
     }
@@ -342,26 +481,27 @@
     const na = Math.sin(now * 0.0009) * 0.05 + Math.sin(now * 0.0021) * 0.02;
     const ca = Math.cos(na), sa = Math.sin(na);
     const P = (lx, ly) => localToScreen(nm, lx * ca - ly * sa, lx * sa + ly * ca);
-    const tipS = P(0, -0.19), tipN = P(0, 0.19), w1 = P(0.024, 0.012), w2 = P(-0.024, 0.012);
+    const tipS = P(0, -0.20), tipN = P(0, 0.20), w1 = P(0.026, 0.014), w2 = P(-0.026, 0.014);
     ctx.save();
     ctx.setTransform(px, 0, 0, px, 0, 0);
     /* 南针(朱砂,指向盘面上方=午位) */
     ctx.beginPath();
     ctx.moveTo(tipS.x, tipS.y); ctx.lineTo(w1.x, w1.y); ctx.lineTo(w2.x, w2.y);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(196, 66, 60, 0.95)';
-    ctx.shadowColor = 'rgba(196,66,60,0.8)'; ctx.shadowBlur = 8; ctx.fill();
-    /* 北针(鎏金,指向子位) */
+    ctx.fillStyle = 'rgba(202, 62, 54, 0.96)';
+    ctx.shadowColor = 'rgba(202,66,60,0.9)'; ctx.shadowBlur = 9; ctx.fill();
+    /* 北针(鎏金) */
     ctx.beginPath();
     ctx.moveTo(tipN.x, tipN.y); ctx.lineTo(w1.x, w1.y); ctx.lineTo(w2.x, w2.y);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(240, 220, 170, 0.95)';
-    ctx.shadowColor = 'rgba(240,220,170,0.9)'; ctx.shadowBlur = 8; ctx.fill();
+    ctx.fillStyle = 'rgba(244, 224, 176, 0.96)';
+    ctx.shadowColor = 'rgba(244,224,176,0.9)'; ctx.shadowBlur = 9; ctx.fill();
     ctx.shadowBlur = 0;
     /* 天心 pivot */
     ctx.beginPath();
-    ctx.arc((tipN.x + tipS.x) / 2, (tipN.y + tipS.y) / 2, 2.6 * zoom, 0, 6.2832);
+    ctx.arc((tipN.x + tipS.x) / 2, (tipN.y + tipS.y) / 2, 2.8 * zoom, 0, 6.2832);
     ctx.fillStyle = GOLD; ctx.fill();
+    ctx.strokeStyle = 'rgba(20,12,8,0.8)'; ctx.lineWidth = 1; ctx.stroke();
     ctx.restore();
 
     ctx.globalAlpha = 1;
@@ -419,7 +559,7 @@
   new IntersectionObserver((es) => { visible = es[0].isIntersecting; }, { threshold: 0.02 }).observe(cv);
 
   /* ─────────── 启动 ─────────── */
-  bakeShadows();
+  bakeHalo();
   bakeAll();
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => bakeAll());   // 字体就绪后重烘,保证字形
