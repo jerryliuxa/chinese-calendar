@@ -26,19 +26,19 @@
   const FONT = "'Noto Serif SC','KaiTi','STKaiti',serif";
 
   /* 层定义:自下而上。rIn/rOut 圈层带,unit 为盘单位半径
-   * tintIn/tintOut:圈带釉色渐变(内→外)· 古风漆木墨玉配色 */
+   * tintIn/tintOut:蓝色琉璃渐变(半透明,透出纸底)· 青花描金 */
   const LAYERS = [
     { id: 'base',    kind: 'base', R: 1.36, rot: 0 },
-    { id: 'xiu',     kind: 'ring', R: 1.20, rIn: 0.975, rOut: 1.155, n: 28, text: XIU,  color: '#cdbd8e', fs: 0.070, start: 90,  two: false,
-      tintIn: 'rgba(46,50,42,0.93)',   tintOut: 'rgba(22,24,19,0.94)',  edge: '#a89868' },
-    { id: 'jie',     kind: 'ring', R: 0.99, rIn: 0.795, rOut: 0.970, n: 24, text: JIE,  color: '#a9dcb4', fs: 0.064, start: 195, two: true,
-      tintIn: 'rgba(30,62,48,0.92)',   tintOut: 'rgba(14,32,25,0.94)',  edge: '#6faf84' },
-    { id: 'shan',    kind: 'ring', R: 0.80, rIn: 0.585, rOut: 0.790, n: 24, text: SHAN, color: '#ffe3a0', fs: 0.118, start: 165, two: false, hero: true,
-      tintIn: 'rgba(104,64,24,0.92)',  tintOut: 'rgba(50,30,12,0.94)',  edge: '#d9a84e' },
-    { id: 'luoshu',  kind: 'ring', R: 0.60, rIn: 0.425, rOut: 0.590, n: 8,  text: LUOSHU, color: '#b4cde4', fs: 0.080, start: 0, two: true,
-      tintIn: 'rgba(36,52,74,0.92)',   tintOut: 'rgba(16,25,42,0.94)',  edge: '#7fa8c9' },
-    { id: 'bagua',   kind: 'bagua', R: 0.44, rIn: 0.170, rOut: 0.435, n: 8,  text: BAGUA, color: '#f4b98c', start: 0,
-      tintIn: 'rgba(92,46,28,0.92)',   tintOut: 'rgba(44,23,14,0.94)',  edge: '#d08858' },
+    { id: 'xiu',     kind: 'ring', R: 1.20, rIn: 0.975, rOut: 1.155, n: 28, text: XIU,  color: '#e8f2ff', fs: 0.070, start: 90,  two: false,
+      tintIn: 'rgba(66,108,168,0.55)',  tintOut: 'rgba(28,52,98,0.62)',   rim: 'rgba(168,206,240,0.90)', glow: 'rgba(140,190,240,0.75)' },
+    { id: 'jie',     kind: 'ring', R: 0.99, rIn: 0.795, rOut: 0.970, n: 24, text: JIE,  color: '#dceeff', fs: 0.064, start: 195, two: true,
+      tintIn: 'rgba(48,92,148,0.52)',   tintOut: 'rgba(20,42,82,0.60)',   rim: 'rgba(150,196,236,0.85)', glow: 'rgba(120,175,230,0.65)' },
+    { id: 'shan',    kind: 'ring', R: 0.80, rIn: 0.585, rOut: 0.790, n: 24, text: SHAN, color: '#ffe6ae', fs: 0.118, start: 165, two: false, hero: true,
+      tintIn: 'rgba(28,62,118,0.62)',   tintOut: 'rgba(10,28,60,0.70)',   rim: 'rgba(232,195,122,0.95)', glow: 'rgba(232,195,122,0.80)' },
+    { id: 'luoshu',  kind: 'ring', R: 0.60, rIn: 0.425, rOut: 0.590, n: 8,  text: LUOSHU, color: '#eaf3ff', fs: 0.080, start: 0, two: true,
+      tintIn: 'rgba(88,128,186,0.50)',  tintOut: 'rgba(38,64,110,0.58)',  rim: 'rgba(178,210,240,0.85)', glow: 'rgba(140,190,240,0.60)' },
+    { id: 'bagua',   kind: 'bagua', R: 0.44, rIn: 0.170, rOut: 0.435, n: 8,  text: BAGUA, color: '#f4faff', start: 0,
+      tintIn: 'rgba(102,140,196,0.48)', tintOut: 'rgba(48,78,128,0.58)',  rim: 'rgba(188,218,244,0.85)', glow: 'rgba(150,198,240,0.60)' },
     { id: 'tianchi', kind: 'tianchi', R: 0.30 }
   ];
   const MID = (LAYERS.length - 1) / 2;
@@ -56,10 +56,11 @@
     return c;
   }
 
-  /* 通用:圈带珐琅底 + 双重金缘 + 辐线 + 刻度环 + 扇界珠饰 */
+  /* 通用:蓝色琉璃圈带 + 描金/描银缘 + 辐线 + 刻度环 + 扇界珠饰 */
   function paintRingFace(g, layer) {
     const rIn = rr(layer.rIn), rOut = rr(layer.rOut), rD = rr(layer.R - 0.012);
-    /* 珐琅釉色渐变 */
+    const hero = !!layer.hero;
+    /* 琉璃釉色渐变(半透明) */
     const gr = g.createRadialGradient(0, 0, rIn, 0, 0, rD);
     gr.addColorStop(0, layer.tintIn);
     gr.addColorStop(1, layer.tintOut);
@@ -69,31 +70,33 @@
     g.fillStyle = gr;
     g.fill();
 
-    /* 外缘:鎏金双环 */
+    /* 外缘:描金(hero)或描银蓝(其余)双环 */
     g.beginPath(); g.arc(0, 0, rD, 0, 6.2832);
-    g.strokeStyle = 'rgba(232,195,122,0.95)'; g.lineWidth = 3;
-    g.shadowColor = 'rgba(232,195,122,0.85)'; g.shadowBlur = 13; g.stroke();
+    g.strokeStyle = layer.rim; g.lineWidth = 3;
+    g.shadowColor = layer.glow; g.shadowBlur = 13; g.stroke();
     g.shadowBlur = 0;
     g.beginPath(); g.arc(0, 0, rD - 5, 0, 6.2832);
-    g.strokeStyle = 'rgba(232,195,122,0.30)'; g.lineWidth = 1; g.stroke();
+    g.strokeStyle = layer.rim.replace(/0\.\d+\)$/, '0.30)'); g.lineWidth = 1; g.stroke();
     /* 内缘:亮线 + 柔线 */
     g.beginPath(); g.arc(0, 0, rIn, 0, 6.2832);
-    g.strokeStyle = 'rgba(232,195,122,0.55)'; g.lineWidth = 1.6;
-    g.shadowColor = 'rgba(232,195,122,0.5)'; g.shadowBlur = 7; g.stroke();
+    g.strokeStyle = layer.rim.replace(/0\.\d+\)$/, '0.55)'); g.lineWidth = 1.6;
+    g.shadowColor = layer.glow; g.shadowBlur = 7; g.stroke();
     g.shadowBlur = 0;
     g.beginPath(); g.arc(0, 0, rIn + 4, 0, 6.2832);
-    g.strokeStyle = 'rgba(232,195,122,0.16)'; g.lineWidth = 1; g.stroke();
+    g.strokeStyle = layer.rim.replace(/0\.\d+\)$/, '0.16)'); g.lineWidth = 1; g.stroke();
 
     /* 外缘细刻度环(余量区) */
-    const tickN = layer.hero ? 96 : 72;
+    const tickN = hero ? 96 : 72;
     for (let i = 0; i < tickN; i++) {
       const a = i / tickN * 6.2832;
-      const major = i % (tickN / (layer.hero ? 24 : 12)) === 0;
+      const major = i % (tickN / (hero ? 24 : 12)) === 0;
       const r1 = rD - 3.5, r0 = r1 - (major ? 9 : 5);
       g.beginPath();
       g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
       g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
-      g.strokeStyle = major ? 'rgba(232,195,122,0.65)' : 'rgba(232,195,122,0.26)';
+      g.strokeStyle = hero
+        ? (major ? 'rgba(232,195,122,0.70)' : 'rgba(232,195,122,0.28)')
+        : (major ? 'rgba(214,232,250,0.60)' : 'rgba(214,232,250,0.24)');
       g.lineWidth = major ? 1.8 : 1;
       g.stroke();
     }
@@ -101,8 +104,8 @@
     /* 辐条分区线(对齐文字起始角) */
     const n = layer.n, step = Math.PI * 2 / n;
     const a0 = layer.start * Math.PI / 180 - Math.PI / 2;
-    g.strokeStyle = 'rgba(232,195,122,0.30)';
-    g.lineWidth = layer.hero ? 1.8 : 1.2;
+    g.strokeStyle = hero ? 'rgba(232,195,122,0.35)' : 'rgba(215,232,252,0.32)';
+    g.lineWidth = hero ? 1.8 : 1.2;
     for (let i = 0; i < n; i++) {
       const a = a0 + i * step;
       g.beginPath();
@@ -112,7 +115,7 @@
     }
     /* 扇区中线(若每扇区两行字则分隔) */
     if (layer.two) {
-      g.strokeStyle = 'rgba(232,195,122,0.12)'; g.lineWidth = 1;
+      g.strokeStyle = hero ? 'rgba(232,195,122,0.14)' : 'rgba(215,232,252,0.13)'; g.lineWidth = 1;
       for (let i = 0; i < n; i++) {
         const a = a0 + (i + 0.5) * step;
         g.beginPath();
@@ -123,12 +126,12 @@
     }
     /* 扇界珠饰 */
     const rMid = (layer.rIn + layer.rOut) / 2;
-    g.fillStyle = GOLD;
-    g.shadowColor = 'rgba(232,195,122,0.9)'; g.shadowBlur = 6;
+    g.fillStyle = hero ? GOLD : '#e6f1fd';
+    g.shadowColor = hero ? 'rgba(232,195,122,0.9)' : 'rgba(190,220,248,0.85)'; g.shadowBlur = 6;
     for (let i = 0; i < n; i++) {
       const a = a0 + i * step;
       g.beginPath();
-      g.arc(Math.cos(a) * rr(rMid), Math.sin(a) * rr(rMid), layer.hero ? 3 : 2.2, 0, 6.2832);
+      g.arc(Math.cos(a) * rr(rMid), Math.sin(a) * rr(rMid), hero ? 3 : 2.2, 0, 6.2832);
       g.fill();
     }
     g.shadowBlur = 0;
@@ -209,37 +212,37 @@
     g.shadowBlur = 0;
   }
 
-  /* 外盘方座:木釉底 · 鎏金重缘 · 红十字定向 · 四角添盘 */
+  /* 外盘方座:蓝琉璃底 · 描金重缘 · 红十字定向 · 四角添盘 */
   function bakeBase(c, g) {
     const half = rr(1.34);
     /* 投影 */
-    g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowBlur = 30;
-    /* 木釉渐变底 */
+    g.shadowColor = 'rgba(40, 70, 110, 0.45)'; g.shadowBlur = 30;
+    /* 蓝琉璃渐变底(半透明) */
     const wd = g.createLinearGradient(-half, -half, half, half);
-    wd.addColorStop(0, 'rgba(46, 32, 20, 0.95)');
-    wd.addColorStop(0.5, 'rgba(28, 19, 13, 0.95)');
-    wd.addColorStop(1, 'rgba(16, 11, 8, 0.95)');
+    wd.addColorStop(0, 'rgba(66, 104, 158, 0.50)');
+    wd.addColorStop(0.5, 'rgba(40, 72, 120, 0.55)');
+    wd.addColorStop(1, 'rgba(20, 40, 76, 0.60)');
     g.fillStyle = wd;
     g.beginPath();
     if (g.roundRect) g.roundRect(-half, -half, half * 2, half * 2, 16);
     else g.rect(-half, -half, half * 2, half * 2);
     g.fill();
     g.shadowBlur = 0;
-    /* 内里暗晕(中心微亮) */
+    /* 内里亮晕(中心微亮) */
     const cg = g.createRadialGradient(0, 0, half * 0.1, 0, 0, half);
-    cg.addColorStop(0, 'rgba(70, 50, 30, 0.30)');
-    cg.addColorStop(1, 'rgba(0,0,0,0.25)');
+    cg.addColorStop(0, 'rgba(190, 220, 250, 0.22)');
+    cg.addColorStop(1, 'rgba(20, 40, 80, 0.20)');
     g.fillStyle = cg;
     g.beginPath();
     if (g.roundRect) g.roundRect(-half, -half, half * 2, half * 2, 16);
     else g.rect(-half, -half, half * 2, half * 2);
     g.fill();
-    /* 錾刻纹:同心圈 + 二十四放射暗线 */
-    g.strokeStyle = 'rgba(232,195,122,0.09)'; g.lineWidth = 1;
+    /* 錾刻纹:同心圈 + 二十四放射细线 */
+    g.strokeStyle = 'rgba(215, 232, 252, 0.12)'; g.lineWidth = 1;
     for (const r0 of [0.42, 0.72, 1.02, 1.24]) {
       g.beginPath(); g.arc(0, 0, rr(r0), 0, 6.2832); g.stroke();
     }
-    g.strokeStyle = 'rgba(232,195,122,0.055)';
+    g.strokeStyle = 'rgba(215, 232, 252, 0.07)';
     for (let i = 0; i < 24; i++) {
       const a = i / 24 * 6.2832;
       g.beginPath();
@@ -247,7 +250,7 @@
       g.lineTo(Math.cos(a) * rr(1.28), Math.sin(a) * rr(1.28));
       g.stroke();
     }
-    /* 鎏金重缘 ×2 */
+    /* 描金重缘 ×2 */
     g.strokeStyle = 'rgba(232,195,122,0.95)'; g.lineWidth = 3.5;
     g.shadowColor = 'rgba(232,195,122,0.8)'; g.shadowBlur = 14;
     g.beginPath();
@@ -275,17 +278,17 @@
     for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
       const x = sx * half * 0.64, y = sy * half * 0.64;
       g.beginPath(); g.arc(x, y, rr(0.105), 0, 6.2832);
-      g.fillStyle = 'rgba(30, 21, 15, 0.95)'; g.fill();
+      g.fillStyle = 'rgba(56, 92, 145, 0.75)'; g.fill();
       g.strokeStyle = 'rgba(232,195,122,0.75)'; g.lineWidth = 2; g.stroke();
       g.beginPath(); g.arc(x, y, rr(0.070), 0, 6.2832);
-      g.strokeStyle = 'rgba(232,195,122,0.35)'; g.lineWidth = 1; g.stroke();
+      g.strokeStyle = 'rgba(214,232,250,0.45)'; g.lineWidth = 1; g.stroke();
       /* 花瓣刻 8 */
       for (let i = 0; i < 8; i++) {
         const a = i / 8 * 6.2832 + 0.39;
         g.beginPath();
         g.moveTo(x + Math.cos(a) * rr(0.048), y + Math.sin(a) * rr(0.048));
         g.lineTo(x + Math.cos(a) * rr(0.066), y + Math.sin(a) * rr(0.066));
-        g.strokeStyle = 'rgba(232,195,122,0.5)'; g.lineWidth = 1.4; g.stroke();
+        g.strokeStyle = 'rgba(214,232,250,0.55)'; g.lineWidth = 1.4; g.stroke();
       }
       g.beginPath(); g.arc(x, y, rr(0.026), 0, 6.2832);
       g.fillStyle = RED + '0.85)'; g.fill();
@@ -305,33 +308,33 @@
     return c;
   }
 
-  /* 天池:朱漆池 · 太极 · 时辰珠 */
+  /* 天池:蓝琉璃池 · 青花太极 · 时辰珠 */
   function bakeTianchi(c, g) {
     const R = 0.30 * K;
-    /* 盘体温墨 */
+    /* 盘体蓝琉璃 */
     const body = g.createRadialGradient(0, 0, R * 0.3, 0, 0, R);
-    body.addColorStop(0, 'rgba(52, 42, 30, 0.95)');
-    body.addColorStop(1, 'rgba(14, 11, 8, 0.96)');
+    body.addColorStop(0, 'rgba(96, 138, 196, 0.85)');
+    body.addColorStop(1, 'rgba(26, 48, 88, 0.90)');
     g.beginPath(); g.arc(0, 0, R, 0, 6.2832);
     g.fillStyle = body; g.fill();
-    g.strokeStyle = 'rgba(217, 178, 106, 0.95)'; g.lineWidth = 3;
-    g.shadowColor = 'rgba(217,178,106,0.8)'; g.shadowBlur = 12; g.stroke();
+    g.strokeStyle = 'rgba(232,195,122,0.95)'; g.lineWidth = 3;
+    g.shadowColor = 'rgba(232,195,122,0.8)'; g.shadowBlur = 12; g.stroke();
     g.shadowBlur = 0;
     g.beginPath(); g.arc(0, 0, R - 6, 0, 6.2832);
-    g.strokeStyle = 'rgba(217,178,106,0.30)'; g.lineWidth = 1; g.stroke();
+    g.strokeStyle = 'rgba(214,232,250,0.35)'; g.lineWidth = 1; g.stroke();
     /* 时辰珠 12 */
     for (let i = 0; i < 12; i++) {
       const a = i / 12 * 6.2832;
       g.beginPath();
       g.arc(Math.cos(a) * R * 0.82, Math.sin(a) * R * 0.82, 2.4, 0, 6.2832);
-      g.fillStyle = i % 3 === 0 ? 'rgba(217,178,106,0.9)' : 'rgba(217,178,106,0.45)';
+      g.fillStyle = i % 3 === 0 ? 'rgba(214,232,250,0.9)' : 'rgba(214,232,250,0.45)';
       g.fill();
     }
-    /* 朱漆池 */
+    /* 深蓝池 */
     const pool = g.createRadialGradient(-R * 0.15, -R * 0.15, R * 0.05, 0, 0, R * 0.66);
-    pool.addColorStop(0, 'rgba(122, 44, 34, 0.95)');
-    pool.addColorStop(0.6, 'rgba(74, 26, 20, 0.95)');
-    pool.addColorStop(1, 'rgba(30, 13, 10, 0.95)');
+    pool.addColorStop(0, 'rgba(70, 112, 172, 0.92)');
+    pool.addColorStop(0.6, 'rgba(36, 66, 116, 0.92)');
+    pool.addColorStop(1, 'rgba(14, 28, 56, 0.92)');
     g.beginPath(); g.arc(0, 0, R * 0.66, 0, 6.2832);
     g.fillStyle = pool; g.fill();
     g.strokeStyle = RED + '0.85)'; g.lineWidth = 1.8;
@@ -340,36 +343,36 @@
     g.strokeStyle = RED + '0.8)'; g.lineWidth = 1.6;
     g.beginPath(); g.moveTo(-R * 0.66, 0); g.lineTo(R * 0.66, 0); g.stroke();
     g.beginPath(); g.moveTo(0, -R * 0.66); g.lineTo(0, R * 0.66); g.stroke();
-    /* 太极 */
+    /* 青花太极 */
     const r = R * 0.50;
     g.beginPath(); g.arc(0, 0, r, 0, 6.2832);
-    g.fillStyle = '#241e16'; g.fill();
-    g.strokeStyle = 'rgba(217,178,106,0.65)'; g.lineWidth = 1.4; g.stroke();
+    g.fillStyle = '#1c3a66'; g.fill();
+    g.strokeStyle = 'rgba(238,244,255,0.65)'; g.lineWidth = 1.4; g.stroke();
     g.beginPath(); g.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false); g.closePath();
-    g.fillStyle = '#d9b26a';
-    g.shadowColor = 'rgba(217,178,106,0.8)'; g.shadowBlur = 12; g.fill();
+    g.fillStyle = '#eef4ff';
+    g.shadowColor = 'rgba(238,244,255,0.7)'; g.shadowBlur = 12; g.fill();
     g.beginPath(); g.arc(0, -r / 2, r / 2, 0, 6.2832); g.fill();
     g.shadowBlur = 0;
-    g.beginPath(); g.arc(0, r / 2, r / 2, 0, 6.2832); g.fillStyle = '#241e16'; g.fill();
-    g.beginPath(); g.arc(0, -r / 2, r / 6.5, 0, 6.2832); g.fillStyle = '#241e16'; g.fill();
-    g.beginPath(); g.arc(0, r / 2, r / 6.5, 0, 6.2832); g.fillStyle = '#d9b26a'; g.fill();
+    g.beginPath(); g.arc(0, r / 2, r / 2, 0, 6.2832); g.fillStyle = '#1c3a66'; g.fill();
+    g.beginPath(); g.arc(0, -r / 2, r / 6.5, 0, 6.2832); g.fillStyle = '#1c3a66'; g.fill();
+    g.beginPath(); g.arc(0, r / 2, r / 6.5, 0, 6.2832); g.fillStyle = '#eef4ff'; g.fill();
     return c;
   }
 
   function bakeHalo() {
-    /* 背景装饰:淡墨星轨环 + 环间墨金星点(细实环不依赖大半径渐变) */
+    /* 背景装饰:淡蓝星轨环 + 环间蓝金星点(细实环不依赖大半径渐变) */
     const s = 1024;
     haloSprite = mkCanvas(s, s);
     const g = haloSprite.getContext('2d');
     g.translate(s / 2, s / 2);
     let seed = 7;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    /* 四重星轨(淡墨,一环朱砂) */
+    /* 四重星轨(淡蓝,一环描金) */
     const rings = [
-      [0.30, 'rgba(110, 95, 70, 0.30)', 1.6],
-      [0.48, 'rgba(110, 95, 70, 0.22)', 1.3],
-      [0.68, 'rgba(176, 58, 46, 0.22)', 1.2],
-      [0.90, 'rgba(110, 95, 70, 0.24)', 1.2]
+      [0.30, 'rgba(96, 138, 188, 0.34)', 1.6],
+      [0.48, 'rgba(96, 138, 188, 0.24)', 1.3],
+      [0.68, 'rgba(232, 195, 122, 0.30)', 1.2],
+      [0.90, 'rgba(96, 138, 188, 0.26)', 1.2]
     ];
     for (const [r0, col, lw] of rings) {
       g.beginPath(); g.arc(0, 0, s * 0.5 * r0, 0, 6.2832);
@@ -378,14 +381,14 @@
       g.stroke();
     }
     g.shadowBlur = 0;
-    /* 环间星点(墨金相间) */
+    /* 环间星点(蓝金相间) */
     for (let i = 0; i < 130; i++) {
       const t = 0.16 + rnd() * 0.80;
       const a = rnd() * 6.2832;
       const x = Math.cos(a) * s * 0.5 * t, y = Math.sin(a) * s * 0.5 * t;
       const r0 = rnd() < 0.75 ? 1.1 + rnd() * 1.3 : 2.2 + rnd() * 1.4;
       g.globalAlpha = 0.16 + rnd() * 0.35;
-      g.fillStyle = rnd() < 0.6 ? '#6b5c42' : '#b03a2e';
+      g.fillStyle = rnd() < 0.6 ? '#4a7099' : '#a5813c';
       g.beginPath(); g.arc(x, y, r0, 0, 6.2832); g.fill();
     }
     g.globalAlpha = 1;
