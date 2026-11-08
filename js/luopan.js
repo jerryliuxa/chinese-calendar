@@ -26,9 +26,9 @@
   const FONT = "'Noto Serif SC','KaiTi','STKaiti',serif";
 
   /* 层定义:自下而上。rIn/rOut 圈层带,unit 为盘单位半径
-   * tintIn/tintOut:蓝色琉璃渐变(半透明,透出纸底)· 青花描金 */
+   * tintIn/tintOut:蓝色琉璃渐变(半透明,透出纸底)· 青花描金
+   * (无外盘方座,纯盘层悬浮) */
   const LAYERS = [
-    { id: 'base',    kind: 'base', R: 1.36, rot: 0 },
     { id: 'xiu',     kind: 'ring', R: 1.20, rIn: 0.975, rOut: 1.155, n: 28, text: XIU,  color: '#e8f2ff', fs: 0.070, start: 90,  two: false,
       tintIn: 'rgba(66,108,168,0.55)',  tintOut: 'rgba(28,52,98,0.62)',   rim: 'rgba(168,206,240,0.90)', glow: 'rgba(140,190,240,0.75)' },
     { id: 'jie',     kind: 'ring', R: 0.99, rIn: 0.795, rOut: 0.970, n: 24, text: JIE,  color: '#dceeff', fs: 0.064, start: 195, two: true,
@@ -556,7 +556,7 @@
     px = Math.min(dprRaw, 1.25) * Math.min(1, 860 / W);
     cv.width = Math.round(W * px); cv.height = Math.round(H * px);
     CX = W / 2; CY = H * 0.485;
-    U = Math.min(W * 0.42, H * 0.30);
+    U = Math.min(W * 0.44, H * 0.315);
   }
   new ResizeObserver(resize).observe(cv);
   new IntersectionObserver((es) => { visible = es[0].isIntersecting; }, { threshold: 0.02 }).observe(cv);
