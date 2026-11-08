@@ -26,19 +26,19 @@
   const FONT = "'Noto Serif SC','KaiTi','STKaiti',serif";
 
   /* 层定义:自下而上。rIn/rOut 圈层带,unit 为盘单位半径
-   * tintIn/tintOut:圈带珐琅釉色渐变(内→外) */
+   * tintIn/tintOut:圈带釉色渐变(内→外)· 古风漆木墨玉配色 */
   const LAYERS = [
     { id: 'base',    kind: 'base', R: 1.36, rot: 0 },
-    { id: 'xiu',     kind: 'ring', R: 1.20, rIn: 0.975, rOut: 1.155, n: 28, text: XIU,  color: '#b4d4ff', fs: 0.070, start: 90,  two: false,
-      tintIn: 'rgba(30,48,102,0.92)',  tintOut: 'rgba(12,20,52,0.94)',  edge: '#8fb8ff' },
-    { id: 'jie',     kind: 'ring', R: 0.99, rIn: 0.795, rOut: 0.970, n: 24, text: JIE,  color: '#93f0bc', fs: 0.064, start: 195, two: true,
-      tintIn: 'rgba(16,66,50,0.92)',   tintOut: 'rgba(8,38,30,0.94)',   edge: '#7de8a8' },
-    { id: 'shan',    kind: 'ring', R: 0.80, rIn: 0.585, rOut: 0.790, n: 24, text: SHAN, color: '#ffe6a8', fs: 0.118, start: 165, two: false, hero: true,
-      tintIn: 'rgba(96,68,22,0.92)',   tintOut: 'rgba(44,30,10,0.94)',  edge: '#e8c37a' },
-    { id: 'luoshu',  kind: 'ring', R: 0.60, rIn: 0.425, rOut: 0.590, n: 8,  text: LUOSHU, color: '#93d8ff', fs: 0.080, start: 0, two: true,
-      tintIn: 'rgba(22,54,96,0.92)',   tintOut: 'rgba(10,30,58,0.94)',  edge: '#6fd3ff' },
-    { id: 'bagua',   kind: 'bagua', R: 0.44, rIn: 0.170, rOut: 0.435, n: 8,  text: BAGUA, color: '#ffbe86', start: 0,
-      tintIn: 'rgba(84,46,20,0.92)',   tintOut: 'rgba(40,22,10,0.94)',  edge: '#f0a56a' },
+    { id: 'xiu',     kind: 'ring', R: 1.20, rIn: 0.975, rOut: 1.155, n: 28, text: XIU,  color: '#cdbd8e', fs: 0.070, start: 90,  two: false,
+      tintIn: 'rgba(46,50,42,0.93)',   tintOut: 'rgba(22,24,19,0.94)',  edge: '#a89868' },
+    { id: 'jie',     kind: 'ring', R: 0.99, rIn: 0.795, rOut: 0.970, n: 24, text: JIE,  color: '#a9dcb4', fs: 0.064, start: 195, two: true,
+      tintIn: 'rgba(30,62,48,0.92)',   tintOut: 'rgba(14,32,25,0.94)',  edge: '#6faf84' },
+    { id: 'shan',    kind: 'ring', R: 0.80, rIn: 0.585, rOut: 0.790, n: 24, text: SHAN, color: '#ffe3a0', fs: 0.118, start: 165, two: false, hero: true,
+      tintIn: 'rgba(104,64,24,0.92)',  tintOut: 'rgba(50,30,12,0.94)',  edge: '#d9a84e' },
+    { id: 'luoshu',  kind: 'ring', R: 0.60, rIn: 0.425, rOut: 0.590, n: 8,  text: LUOSHU, color: '#b4cde4', fs: 0.080, start: 0, two: true,
+      tintIn: 'rgba(36,52,74,0.92)',   tintOut: 'rgba(16,25,42,0.94)',  edge: '#7fa8c9' },
+    { id: 'bagua',   kind: 'bagua', R: 0.44, rIn: 0.170, rOut: 0.435, n: 8,  text: BAGUA, color: '#f4b98c', start: 0,
+      tintIn: 'rgba(92,46,28,0.92)',   tintOut: 'rgba(44,23,14,0.94)',  edge: '#d08858' },
     { id: 'tianchi', kind: 'tianchi', R: 0.30 }
   ];
   const MID = (LAYERS.length - 1) / 2;
@@ -305,33 +305,33 @@
     return c;
   }
 
-  /* 天池:水纹池 · 太极 · 时辰珠 */
+  /* 天池:朱漆池 · 太极 · 时辰珠 */
   function bakeTianchi(c, g) {
     const R = 0.30 * K;
-    /* 盘体珐琅 */
+    /* 盘体温墨 */
     const body = g.createRadialGradient(0, 0, R * 0.3, 0, 0, R);
-    body.addColorStop(0, 'rgba(40, 30, 66, 0.95)');
-    body.addColorStop(1, 'rgba(10, 8, 26, 0.96)');
+    body.addColorStop(0, 'rgba(52, 42, 30, 0.95)');
+    body.addColorStop(1, 'rgba(14, 11, 8, 0.96)');
     g.beginPath(); g.arc(0, 0, R, 0, 6.2832);
     g.fillStyle = body; g.fill();
-    g.strokeStyle = 'rgba(232,195,122,0.95)'; g.lineWidth = 3;
-    g.shadowColor = 'rgba(232,195,122,0.9)'; g.shadowBlur = 15; g.stroke();
+    g.strokeStyle = 'rgba(217, 178, 106, 0.95)'; g.lineWidth = 3;
+    g.shadowColor = 'rgba(217,178,106,0.8)'; g.shadowBlur = 12; g.stroke();
     g.shadowBlur = 0;
     g.beginPath(); g.arc(0, 0, R - 6, 0, 6.2832);
-    g.strokeStyle = 'rgba(232,195,122,0.30)'; g.lineWidth = 1; g.stroke();
+    g.strokeStyle = 'rgba(217,178,106,0.30)'; g.lineWidth = 1; g.stroke();
     /* 时辰珠 12 */
     for (let i = 0; i < 12; i++) {
       const a = i / 12 * 6.2832;
       g.beginPath();
       g.arc(Math.cos(a) * R * 0.82, Math.sin(a) * R * 0.82, 2.4, 0, 6.2832);
-      g.fillStyle = i % 3 === 0 ? 'rgba(232,195,122,0.9)' : 'rgba(232,195,122,0.45)';
+      g.fillStyle = i % 3 === 0 ? 'rgba(217,178,106,0.9)' : 'rgba(217,178,106,0.45)';
       g.fill();
     }
-    /* 水纹池 */
+    /* 朱漆池 */
     const pool = g.createRadialGradient(-R * 0.15, -R * 0.15, R * 0.05, 0, 0, R * 0.66);
-    pool.addColorStop(0, 'rgba(70, 44, 110, 0.95)');
-    pool.addColorStop(0.6, 'rgba(34, 22, 62, 0.95)');
-    pool.addColorStop(1, 'rgba(12, 8, 28, 0.95)');
+    pool.addColorStop(0, 'rgba(122, 44, 34, 0.95)');
+    pool.addColorStop(0.6, 'rgba(74, 26, 20, 0.95)');
+    pool.addColorStop(1, 'rgba(30, 13, 10, 0.95)');
     g.beginPath(); g.arc(0, 0, R * 0.66, 0, 6.2832);
     g.fillStyle = pool; g.fill();
     g.strokeStyle = RED + '0.85)'; g.lineWidth = 1.8;
@@ -343,49 +343,49 @@
     /* 太极 */
     const r = R * 0.50;
     g.beginPath(); g.arc(0, 0, r, 0, 6.2832);
-    g.fillStyle = '#0d1130'; g.fill();
-    g.strokeStyle = 'rgba(232,195,122,0.65)'; g.lineWidth = 1.4; g.stroke();
+    g.fillStyle = '#241e16'; g.fill();
+    g.strokeStyle = 'rgba(217,178,106,0.65)'; g.lineWidth = 1.4; g.stroke();
     g.beginPath(); g.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false); g.closePath();
-    g.fillStyle = GOLD;
-    g.shadowColor = 'rgba(232,195,122,0.9)'; g.shadowBlur = 14; g.fill();
+    g.fillStyle = '#d9b26a';
+    g.shadowColor = 'rgba(217,178,106,0.8)'; g.shadowBlur = 12; g.fill();
     g.beginPath(); g.arc(0, -r / 2, r / 2, 0, 6.2832); g.fill();
     g.shadowBlur = 0;
-    g.beginPath(); g.arc(0, r / 2, r / 2, 0, 6.2832); g.fillStyle = '#0d1130'; g.fill();
-    g.beginPath(); g.arc(0, -r / 2, r / 6.5, 0, 6.2832); g.fillStyle = '#0d1130'; g.fill();
-    g.beginPath(); g.arc(0, r / 2, r / 6.5, 0, 6.2832); g.fillStyle = GOLD; g.fill();
+    g.beginPath(); g.arc(0, r / 2, r / 2, 0, 6.2832); g.fillStyle = '#241e16'; g.fill();
+    g.beginPath(); g.arc(0, -r / 2, r / 6.5, 0, 6.2832); g.fillStyle = '#241e16'; g.fill();
+    g.beginPath(); g.arc(0, r / 2, r / 6.5, 0, 6.2832); g.fillStyle = '#d9b26a'; g.fill();
     return c;
   }
 
   function bakeHalo() {
-    /* 背景装饰:星轨环 + 环间星点(细实环不依赖大半径渐变,无色带之虞) */
+    /* 背景装饰:淡墨星轨环 + 环间墨金星点(细实环不依赖大半径渐变) */
     const s = 1024;
     haloSprite = mkCanvas(s, s);
     const g = haloSprite.getContext('2d');
     g.translate(s / 2, s / 2);
     let seed = 7;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    /* 四重星轨 */
+    /* 四重星轨(淡墨,一环朱砂) */
     const rings = [
-      [0.30, 'rgba(160,130,225,0.20)', 1.6],
-      [0.48, 'rgba(140,110,215,0.15)', 1.3],
-      [0.68, 'rgba(130,100,205,0.11)', 1.1],
-      [0.90, 'rgba(232,195,122,0.13)', 1.2]
+      [0.30, 'rgba(110, 95, 70, 0.30)', 1.6],
+      [0.48, 'rgba(110, 95, 70, 0.22)', 1.3],
+      [0.68, 'rgba(176, 58, 46, 0.22)', 1.2],
+      [0.90, 'rgba(110, 95, 70, 0.24)', 1.2]
     ];
     for (const [r0, col, lw] of rings) {
       g.beginPath(); g.arc(0, 0, s * 0.5 * r0, 0, 6.2832);
       g.strokeStyle = col; g.lineWidth = lw;
-      g.shadowColor = col; g.shadowBlur = 8;
+      g.shadowColor = col; g.shadowBlur = 6;
       g.stroke();
     }
     g.shadowBlur = 0;
-    /* 环间星点(疏密随机,金蓝相间) */
+    /* 环间星点(墨金相间) */
     for (let i = 0; i < 130; i++) {
       const t = 0.16 + rnd() * 0.80;
       const a = rnd() * 6.2832;
       const x = Math.cos(a) * s * 0.5 * t, y = Math.sin(a) * s * 0.5 * t;
       const r0 = rnd() < 0.75 ? 1.1 + rnd() * 1.3 : 2.2 + rnd() * 1.4;
-      g.globalAlpha = 0.16 + rnd() * 0.4;
-      g.fillStyle = rnd() < 0.6 ? '#cfe0ff' : '#e8c37a';
+      g.globalAlpha = 0.16 + rnd() * 0.35;
+      g.fillStyle = rnd() < 0.6 ? '#6b5c42' : '#b03a2e';
       g.beginPath(); g.arc(x, y, r0, 0, 6.2832); g.fill();
     }
     g.globalAlpha = 1;

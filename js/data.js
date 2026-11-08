@@ -6,15 +6,15 @@
 (function () {
   'use strict';
 
-  /* ─────────── 节日类别 ─────────── */
+  /* ─────────── 节日类别(古风色) ─────────── */
   const CATS = {
-    public:    { label: '公共节日', color: '#ff6b6b' },
-    tradition: { label: '传统节日', color: '#f0c674' },
-    term:      { label: '节气',     color: '#7de8a8' },
-    taoist:    { label: '道教',     color: '#6fd3ff' },
-    buddhist:  { label: '佛教',     color: '#c99cff' },
-    ethnic:    { label: '民族',     color: '#ff7fd1' },
-    islamic:   { label: '伊斯兰',   color: '#5ee8c8' }
+    public:    { label: '公共节日', color: '#b03a2e' },
+    tradition: { label: '传统节日', color: '#9a7226' },
+    term:      { label: '节气',     color: '#46714e' },
+    taoist:    { label: '道教',     color: '#2f5d7c' },
+    buddhist:  { label: '佛教',     color: '#7a4e78' },
+    ethnic:    { label: '民族',     color: '#b8526f' },
+    islamic:   { label: '伊斯兰',   color: '#2f7d6d' }
   };
 
   /*
